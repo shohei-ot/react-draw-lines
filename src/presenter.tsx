@@ -15,6 +15,8 @@ export type PresenterProps = {
   onMouseDown: (e: HTMLElementEventMap['mousedown']) => void;
   onMouseMove: (e: HTMLElementEventMap['mousemove']) => void;
   onMouseUp: (e: HTMLElementEventMap['mouseup']) => void;
+  width?: number;
+  height?: number;
 };
 
 export const Presenter = (props: PresenterProps): JSX.Element => {
@@ -28,6 +30,8 @@ export const Presenter = (props: PresenterProps): JSX.Element => {
     onMouseUp,
     lineStrokes,
     canvasStyle,
+    width,
+    height,
   } = props;
 
   const [strokes, setStrokes] = useState<Stroke[]>([]);
@@ -106,6 +110,12 @@ export const Presenter = (props: PresenterProps): JSX.Element => {
   };
 
   return (
-    <canvas ref={canvasRef} className={props.className} style={props.style} />
+    <canvas
+      width={width}
+      height={height}
+      ref={canvasRef}
+      className={props.className}
+      style={props.style}
+    />
   );
 };

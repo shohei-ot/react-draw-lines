@@ -1,10 +1,16 @@
-import React, { useState } from 'react';
+import React, { FC, useState } from 'react';
 import { Line, Point, Stroke } from './interface';
 import { Presenter } from './presenter';
 
 let INSTANCE_ID_SEQUENCE_POINT = 0;
 
-export const ReactDrawLines = (): JSX.Element => {
+export type Props = {
+  width: number;
+  height: number;
+  onDraw?: (imgBase64: string) => void;
+};
+
+export const ReactDrawLines: FC<Props> = (props: Props): JSX.Element => {
   const [instanceId] = useState(INSTANCE_ID_SEQUENCE_POINT++);
   const [drawingFlag, setDrawingFlag] = useState(false);
   const [strokes, setStrokes] = useState<Stroke[]>([]);
@@ -41,11 +47,22 @@ export const ReactDrawLines = (): JSX.Element => {
 
     endStroke(currentPoint);
     setDrawingFlag(false);
+
+    const target = e.target as HTMLCanvasElement | null;
+    if (!target) throw new Error('ev.target が不在');
+    onDrawHandler(target);
   };
 
-  const onTouchCancel = (e: HTMLElementEventMap['touchcancel']) => {
+  const onDrawHandler = (canvasEl: HTMLCanvasElement) => {
+    const image = canvasEl.toDataURL();
+    props.onDraw && props.onDraw(image);
+  };
+
+  // const onTouchCancel = (e: HTMLElementEventMap['touchcancel']) => {
+  const onTouchCancel = () => {
     if (!drawingFlag) return;
-    if (!currentStroke) throw new Error('currentStroke が初期化されていません');
+    // if (!currentStroke) throw new Error('currentStroke が初期化されていません');
+    if (!currentStroke) return;
 
     clearTmpDrawing();
     setDrawingFlag(false);
@@ -75,6 +92,10 @@ export const ReactDrawLines = (): JSX.Element => {
 
     endStroke(currentPoint);
     setDrawingFlag(false);
+
+    const target = e.target as HTMLCanvasElement | null;
+    if (!target) throw new Error('ev.target が不在');
+    onDrawHandler(target);
   };
 
   const getPrevPoint = (stroke: Stroke) => {
@@ -166,6 +187,8 @@ export const ReactDrawLines = (): JSX.Element => {
       onMouseMove={onMouseMove}
       onMouseUp={onMouseUp}
       lineStrokes={strokes}
+      width={props.width}
+      height={props.height}
     />
   );
 };

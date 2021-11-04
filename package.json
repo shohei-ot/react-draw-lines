@@ -24,6 +24,10 @@
   "keywords": [],
   "author": "Shohei Ohta <shohei.ot@gmail.com> (https://qiita.com/shohei_ot)",
   "license": "ISC",
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:shohei-ot/react-draw-lines.git"
+  },
   "dependencies": {
     "react": "^17.0.2",
     "react-dom": "^17.0.2"

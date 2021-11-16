@@ -6,6 +6,7 @@ module.exports = {
   extends: [
     'eslint:recommended',
     'plugin:react/recommended',
+    'plugin:react-hooks/recommended',
     'plugin:@typescript-eslint/recommended',
     'prettier',
   ],
@@ -19,4 +20,9 @@ module.exports = {
   },
   plugins: ['react', '@typescript-eslint'],
   rules: {},
+  settings: {
+    react: {
+      version: 'detect',
+    },
+  },
 };

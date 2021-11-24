@@ -16,6 +16,7 @@ Base.args = {
   width: 600,
   height: 400,
   onDraw: (img) => {
-    console.log(img);
+    // console.log(img);
   },
+  style: { backgroundColor: '#dfdfdf' },
 };

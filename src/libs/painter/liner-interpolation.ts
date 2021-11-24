@@ -1,4 +1,4 @@
-import { Point } from '../interface';
+import { Point } from './interface';
 
 type XyPoint = {
   x: number;

@@ -1,4 +1,4 @@
-import { Point } from './interface';
+import { Point } from '../interface';
 
 type XyPoint = {
   x: number;
@@ -6,6 +6,7 @@ type XyPoint = {
 };
 
 const PRESSURE_STEP_NUM = 0.1;
+const ROUND_UNIT = 10;
 
 export const linerInterpolationByPressure = (
   start: Point,
@@ -31,7 +32,7 @@ export const linerInterpolationByPressure = (
   const xSign = Math.sign(endX - startX);
 
   const forceSign = Math.sign(endForce - startForce);
-  const loopNum = getLoopNumFromPressure(startForce, endForce);
+  const loopNum = getLoopCountFromPressure(startForce, endForce);
 
   const xDiff = (endX - startX) * xSign;
   const xStep = xDiff / loopNum;
@@ -41,8 +42,9 @@ export const linerInterpolationByPressure = (
     const nextX = xStep * (1 + i) * xSign + startX;
     const nextY = linerInterpolation(start, end, nextX);
     const nextPressure =
-      Math.round((PRESSURE_STEP_NUM * (1 + i) * forceSign + startForce) * 10) /
-      10;
+      Math.round(
+        (PRESSURE_STEP_NUM * (1 + i) * forceSign + startForce) * ROUND_UNIT
+      ) / ROUND_UNIT;
     const nextPoint: Point = { x: nextX, y: nextY, force: nextPressure };
     result.push(nextPoint);
   }
@@ -55,7 +57,7 @@ const linerInterpolation = (start: XyPoint, end: XyPoint, x: number) => {
   return start.y + ((end.y - start.y) * (x - start.x)) / (end.x - start.x);
 };
 
-const getLoopNumFromPressure = (startPress: number, endPress: number) => {
+const getLoopCountFromPressure = (startPress: number, endPress: number) => {
   const pressSign = Math.sign(endPress - startPress);
   const adding = PRESSURE_STEP_NUM;
   const diff = Math.abs(endPress - startPress);

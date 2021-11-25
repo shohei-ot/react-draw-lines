@@ -1,4 +1,4 @@
-import { Line, Point } from './interface';
+import { Line, Point } from '../interface';
 
 export const pointsToLines = (points: Point[]): Line[] => {
   const lines: Line[] = [];

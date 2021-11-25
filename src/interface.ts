@@ -9,12 +9,6 @@ export type Line = {
   end: Point;
 };
 
-export type OneStroke = {
-  start: Point;
-  end: Point;
-  lines: Line[];
-};
-
 export type CanvasStyle = {
   lineWidth: number;
   strokeStyle: string;

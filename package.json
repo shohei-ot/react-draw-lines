@@ -23,9 +23,7 @@
     ],
     "*.json": "prettier --write"
   },
-  "keywords": [],
-  "author": "Shohei Ohta <shohei.ot@gmail.com> (https://qiita.com/shohei_ot)",
-  "license": "ISC",
+  "author": "Shohei Ohta <sota@thomas-gr.com>",
   "repository": {
     "type": "git",
     "url": "git@github.com:shohei-ot/react-draw-lines.git"
@@ -34,6 +32,9 @@
     "eventemitter3": "^4.0.7",
     "react": "^17.0.2",
     "react-dom": "^17.0.2"
+  },
+  "peerDependencies": {
+    "react": "17.x || 18.x"
   },
   "devDependencies": {
     "@babel/core": "^7.16.0",

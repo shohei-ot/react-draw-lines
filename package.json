@@ -1,17 +1,18 @@
 {
   "name": "react-draw-line",
-  "version": "1.0.0",
+  "version": "0.0.1",
   "description": "",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "scripts": {
-    "build": "tsc",
+    "build": "npm run clear-dist && tsc",
     "test": "jest",
     "prepare": "husky install",
     "lint-staged": "lint-staged",
     "storybook": "start-storybook -p 6006",
     "build-storybook": "build-storybook",
-    "ncu": "npm-check-updates"
+    "ncu": "npm-check-updates",
+    "clear-dist": "rimraf ./dist/**/*"
   },
   "lint-staged": {
     "*.{ts,tsx}": [
@@ -58,6 +59,7 @@
     "lint-staged": "^11.2.6",
     "npm-check-updates": "^12.0.2",
     "prettier": "^2.5.0",
+    "rimraf": "^3.0.2",
     "ts-jest": "^27.0.7",
     "typescript": "^4.5.2"
   }

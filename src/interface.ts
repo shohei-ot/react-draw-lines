@@ -1,7 +1,8 @@
 export type Point = {
   x: number;
   y: number;
-  force?: number; // 0.0 ~ 1.0
+  force: number; // 0.0 ~ 1.0
+  identifier: number;
 };
 
 export type Line = {
@@ -9,18 +10,11 @@ export type Line = {
   end: Point;
 };
 
-export type CanvasStyle = {
+export type CanvasDrawingStyle = {
   lineWidth: number;
   strokeStyle: string;
   lineCap: CanvasLineCap;
   lineJoin: CanvasLineJoin;
 };
 
-const ROUND = 'round';
-
-export const DEFAULT_CANVAS_STYLE: Readonly<CanvasStyle> = {
-  lineWidth: 5,
-  lineCap: ROUND,
-  lineJoin: ROUND,
-  strokeStyle: '#000',
-};
+export type MappedConst<T extends string> = { [key in T]: key };

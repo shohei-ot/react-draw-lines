@@ -1,8 +1,12 @@
-// import { LazyBrush } from 'lazy-brush';
-import React, { useRef } from 'react';
-import { Point } from './interface';
+import React, {
+  forwardRef,
+  useImperativeHandle,
+  useRef,
+  useState,
+} from 'react';
+import { MappedConst, Point } from './interface';
 import { getPoint } from './libs/get-point';
-import { CanvasStyle, DEFAULT_CANVAS_STYLE } from './interface';
+import { CanvasDrawingStyle } from './interface';
 import { linerInterpolationByPressure } from './libs/liner-interpolation';
 
 type DrawEvent =
@@ -13,12 +17,14 @@ export type Props = {
   canvasWidth: number;
   canvasHeight: number;
   backgroundColor?: string;
-  onChange?: (imgUrl: string) => void;
+  onChange?: (out: { lines: Point[][]; imgUrl: string }) => void;
 };
 
-type CanvasLayerName = 'DRAWING_HISTORY' | 'TMP' | 'USER_INTERFACE';
+export interface IDrawLineHandle {
+  eraseAllCanvas(): void;
+}
 
-type MappedConst<T extends string> = { [key in T]: key };
+type CanvasLayerName = 'DRAWING_HISTORY' | 'TMP' | 'USER_INTERFACE';
 
 const CANVAS_LAYER: MappedConst<CanvasLayerName> = {
   DRAWING_HISTORY: 'DRAWING_HISTORY',
@@ -33,21 +39,24 @@ type CanvasLayerRefs = {
   [key in keyof typeof CANVAS_LAYER]: React.MutableRefObject<HTMLCanvasElement | null>;
 };
 
-const CANVAS_COMMON_STYLE: React.CSSProperties = {
-  display: 'block',
-  position: 'absolute',
+const CANVAS_CONTEXT_STYLE: CanvasDrawingStyle = {
+  lineWidth: 10,
+  lineCap: 'round',
+  lineJoin: 'round',
+  strokeStyle: '#000',
 };
 
-// const LAZY = {
-//   RADIUS: 10,
-// };
-
-const CANVAS_CONTEXT_STYLE: CanvasStyle = {
-  ...DEFAULT_CANVAS_STYLE,
-};
-
-export const DrawLine = (props: Props): JSX.Element => {
+const DrawLine: React.ForwardRefRenderFunction<IDrawLineHandle, Props> = (
+  props: Props,
+  ref
+): JSX.Element => {
   const containerRef = useRef<HTMLDivElement | null>(null);
+
+  useImperativeHandle(ref, () => ({
+    eraseAllCanvas: () => {
+      eraseAllCanvas();
+    },
+  }));
 
   const canvasRefs: CanvasLayerRefs = {
     DRAWING_HISTORY: useRef<HTMLCanvasElement | null>(null),
@@ -55,50 +64,74 @@ export const DrawLine = (props: Props): JSX.Element => {
     USER_INTERFACE: useRef<HTMLCanvasElement | null>(null),
   };
 
-  // const lazy = new LazyBrush({ radius: LAZY.RADIUS });
+  const [ctxTranslated, setCtxTranslated] = useState(false);
 
   // ポインターが移動した事を示すフラグ
-  let pointerHasMoved = false;
+  // const [pointerHasMoved, setPointerHasMoved] = useState(false);
 
   // 線を引いているフラグ
-  let drawingStarted = false;
+  const [drawingStarted, setDrawingStarted] = useState(false);
 
   // 引かれた線
-  const lines: Point[][] = [];
+  const [lines, setLines] = useState<Point[][]>([]);
 
   // 引いている線を表現する整形済みポイントの配列
-  const points: Point[] = [];
+  const [points, setPoints] = useState<Point[]>([]);
+
+  // 全消し機能www
+  const eraseAllCanvas = () => {
+    setPoints([]);
+    setLines([]);
+    layerNames.forEach((k) => {
+      const canvasEl = canvasRefs[k].current;
+      if (!canvasEl) return;
+      const ctx = canvasEl.getContext('2d');
+      if (!ctx) return;
+      ctx.clearRect(0, 0, props.canvasWidth, props.canvasHeight);
+    });
+    handleOnChange();
+  };
+
+  // TODO: リサイズ機能
+  // TODO: 復元機能? (描画済み画像を受け取って背景画像として読み込み)
 
   const handleDrawStart = (e: DrawEvent) => {
-    if (drawingStarted) return;
-    drawingStarted = true;
+    if (drawingStarted) {
+      return;
+    }
+
+    setDrawingStarted(true);
 
     addPoint(getPoint(e.nativeEvent));
     drawPoints();
 
-    pointerHasMoved = true;
+    // setPointerHasMoved(true);
   };
 
   const handleDrawMove = (e: DrawEvent) => {
-    if (!drawingStarted) return;
+    if (!drawingStarted) {
+      return;
+    }
 
-    addPoint(getPoint(e.nativeEvent));
+    addPoint(getPoint(e.nativeEvent, points[points.length - 1]));
     drawPoints();
 
-    pointerHasMoved = true;
+    // setPointerHasMoved(true);
   };
 
   const handleDrawEnd = (e: DrawEvent) => {
-    if (!drawingStarted) return;
+    if (!drawingStarted) {
+      return;
+    }
 
-    addPoint(getPoint(e.nativeEvent));
+    addPoint(getPoint(e.nativeEvent, points[points.length - 1]));
     drawPoints();
     savePointsToLine();
     transcribeTmpToDrawingHistory();
     clearCanvas(['TMP']);
 
-    drawingStarted = false;
-    pointerHasMoved = true;
+    setDrawingStarted(false);
+    // setPointerHasMoved(true);
 
     handleOnChange();
   };
@@ -110,25 +143,22 @@ export const DrawLine = (props: Props): JSX.Element => {
     if (!canvas) return;
 
     const imgUrl = canvas.toDataURL('image/png');
-    props.onChange(imgUrl);
+    props.onChange({ lines: JSON.parse(JSON.stringify(lines)), imgUrl });
   };
 
   const addPoint = (point: Point) => {
-    // rawPoints.push(point)
     if (points.length === 0) {
       points.push(point);
+      setPoints([...points]);
     } else {
       const organizedPoints = linerInterpolationByPressure(
         points[points.length - 1],
         point
       );
       points.push(...organizedPoints);
+      setPoints([...points]);
     }
-
-    return points;
   };
-
-  // let drawPointsAnimateId: number | null = null;
 
   const drawPoints = () => {
     if (points.length === 0) return;
@@ -136,46 +166,37 @@ export const DrawLine = (props: Props): JSX.Element => {
     const tmpCtx = canvasRefs.TMP.current.getContext('2d');
     if (!tmpCtx) return;
 
-    // if (drawPointsAnimateId !== null) {
-    //   window.cancelAnimationFrame(drawPointsAnimateId);
-    // }
-
-    // canvas styles
-    tmpCtx.lineWidth = CANVAS_CONTEXT_STYLE.lineWidth;
-    tmpCtx.lineCap = CANVAS_CONTEXT_STYLE.lineCap;
-    tmpCtx.lineJoin = CANVAS_CONTEXT_STYLE.lineJoin;
-    tmpCtx.strokeStyle = CANVAS_CONTEXT_STYLE.strokeStyle;
-
-    // 描画処理
-    // ctx.moveTo(points[0].x, points[0].y);
-    // ctx.beginPath();
-    // points.forEach((p) => {
-    //   ctx.lineTo(p.x, p.y);
-    // });
-    // ((pts) => {
-    // drawPointsAnimateId =
-    // window.requestAnimationFrame(() => {
     const isFirstPoint = points.length === 1;
 
     const prevPoint = isFirstPoint ? points[0] : points[points.length - 2];
     const latestPoint = points[points.length - 1];
 
+    if (!ctxTranslated) {
+      tmpCtx.translate(0.5, 0.5);
+      setCtxTranslated(true);
+    }
+
     if (isFirstPoint) {
       tmpCtx.beginPath();
     }
+
+    // canvas styles
+    // FIXME: 筆圧の取り扱い
+    tmpCtx.lineWidth = CANVAS_CONTEXT_STYLE.lineWidth * latestPoint.force;
+    tmpCtx.lineCap = CANVAS_CONTEXT_STYLE.lineCap;
+    tmpCtx.lineJoin = CANVAS_CONTEXT_STYLE.lineJoin;
+    tmpCtx.strokeStyle = CANVAS_CONTEXT_STYLE.strokeStyle;
 
     tmpCtx.moveTo(prevPoint.x, prevPoint.y);
     tmpCtx.lineTo(latestPoint.x, latestPoint.y);
 
     tmpCtx.stroke();
-    // drawPointsAnimateId = null;
-    // });
-    // })(points);
   };
 
   const savePointsToLine = () => {
-    lines.push(points);
-    points.length = 0;
+    lines.push([...points]);
+    setLines([...lines]);
+    setPoints([]);
   };
 
   const transcribeTmpToDrawingHistory = () => {
@@ -203,14 +224,14 @@ export const DrawLine = (props: Props): JSX.Element => {
     });
   };
 
-  const loop = (once = false) => {
-    pointerHasMoved = false;
-    if (!once) {
-      window.requestAnimationFrame(() => {
-        loop();
-      });
-    }
-  };
+  // const loop = (once = false) => {
+  //   setPointerHasMoved(false);
+  //   if (!once) {
+  //     window.requestAnimationFrame(() => {
+  //       loop();
+  //     });
+  //   }
+  // };
 
   return (
     <div
@@ -231,12 +252,13 @@ export const DrawLine = (props: Props): JSX.Element => {
           <canvas
             ref={casnvasRef}
             key={layerName}
-            style={{ ...CANVAS_COMMON_STYLE }}
+            style={{ display: 'block', position: 'absolute' }}
             width={props.canvasWidth}
             height={props.canvasHeight}
             onMouseDown={isInterface ? handleDrawStart : undefined}
             onMouseMove={isInterface ? handleDrawMove : undefined}
             onMouseUp={isInterface ? handleDrawEnd : undefined}
+            onMouseLeave={isInterface ? handleDrawEnd : undefined}
             onTouchStart={isInterface ? handleDrawStart : undefined}
             onTouchMove={isInterface ? handleDrawMove : undefined}
             onTouchEnd={isInterface ? handleDrawEnd : undefined}
@@ -248,4 +270,6 @@ export const DrawLine = (props: Props): JSX.Element => {
   );
 };
 
-export default DrawLine;
+const WrappedDrawLine = forwardRef(DrawLine);
+
+export default WrappedDrawLine;

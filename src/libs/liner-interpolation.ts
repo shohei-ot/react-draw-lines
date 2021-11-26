@@ -14,8 +14,11 @@ export const linerInterpolationByPressure = (
 ): Point[] => {
   const result: Point[] = [];
 
+  const noChangedPressure = start.force === end.force;
+  const noChangedXPosition = start.x === end.x;
+  const noChangedYPosition = start.y === end.y;
   const noNeedInterpolation =
-    typeof start.force === 'undefined' || typeof end.force === 'undefined';
+    noChangedPressure && noChangedXPosition && noChangedYPosition;
 
   if (noNeedInterpolation) {
     result.push(start);
@@ -24,10 +27,10 @@ export const linerInterpolationByPressure = (
   }
 
   const startX = start.x;
-  const startForce = start.force!;
+  const startForce = start.force;
 
   const endX = end.x;
-  const endForce = end.force!;
+  const endForce = end.force;
 
   const xSign = Math.sign(endX - startX);
 
@@ -45,7 +48,12 @@ export const linerInterpolationByPressure = (
       Math.round(
         (PRESSURE_STEP_NUM * (1 + i) * forceSign + startForce) * ROUND_UNIT
       ) / ROUND_UNIT;
-    const nextPoint: Point = { x: nextX, y: nextY, force: nextPressure };
+    const nextPoint: Point = {
+      x: nextX,
+      y: nextY,
+      force: nextPressure,
+      identifier: start.identifier,
+    };
     result.push(nextPoint);
   }
   result.push(end);
@@ -53,7 +61,8 @@ export const linerInterpolationByPressure = (
   return result;
 };
 
-const linerInterpolation = (start: XyPoint, end: XyPoint, x: number) => {
+export const linerInterpolation = (start: XyPoint, end: XyPoint, x: number) => {
+  if (start.x === end.x && start.x === x) return start.y;
   return start.y + ((end.y - start.y) * (x - start.x)) / (end.x - start.x);
 };
 

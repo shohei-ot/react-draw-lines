@@ -1,5 +1,5 @@
 {
-  "name": "react-draw-lines",
+  "name": "react-draw-line",
   "version": "1.0.0",
   "description": "",
   "main": "./dist/index.js",
@@ -10,7 +10,8 @@
     "prepare": "husky install",
     "lint-staged": "lint-staged",
     "storybook": "start-storybook -p 6006",
-    "build-storybook": "build-storybook"
+    "build-storybook": "build-storybook",
+    "ncu": "npm-check-updates"
   },
   "lint-staged": {
     "*.{ts,tsx}": [
@@ -29,7 +30,6 @@
     "url": "git@github.com:shohei-ot/react-draw-lines.git"
   },
   "dependencies": {
-    "eventemitter3": "^4.0.7",
     "react": "^17.0.2",
     "react-dom": "^17.0.2"
   },
@@ -43,21 +43,22 @@
     "@storybook/addon-essentials": "^6.3.12",
     "@storybook/addon-links": "^6.3.12",
     "@storybook/react": "^6.3.12",
-    "@types/jest": "^27.0.2",
-    "@types/react": "^17.0.30",
-    "@types/react-dom": "^17.0.9",
-    "@typescript-eslint/eslint-plugin": "^5.0.0",
-    "@typescript-eslint/parser": "^5.0.0",
+    "@types/jest": "^27.0.3",
+    "@types/react": "^17.0.37",
+    "@types/react-dom": "^17.0.11",
+    "@typescript-eslint/eslint-plugin": "^5.4.0",
+    "@typescript-eslint/parser": "^5.4.0",
     "babel-loader": "^8.2.3",
     "eslint": "^7.32.0",
     "eslint-config-prettier": "^8.3.0",
-    "eslint-plugin-react": "^7.26.1",
-    "eslint-plugin-react-hooks": "^4.2.0",
-    "husky": "^7.0.0",
-    "jest": "^27.2.5",
-    "lint-staged": "^11.2.3",
-    "prettier": "^2.4.1",
-    "ts-jest": "^27.0.6",
-    "typescript": "^4.4.4"
+    "eslint-plugin-react": "^7.27.1",
+    "eslint-plugin-react-hooks": "^4.3.0",
+    "husky": "^7.0.4",
+    "jest": "^27.3.1",
+    "lint-staged": "^11.2.6",
+    "npm-check-updates": "^12.0.2",
+    "prettier": "^2.5.0",
+    "ts-jest": "^27.0.7",
+    "typescript": "^4.5.2"
   }
 }

@@ -1,7 +1,12 @@
-import React, { useRef, useState } from 'react';
-import { Point } from './interface';
+import React, {
+  forwardRef,
+  useImperativeHandle,
+  useRef,
+  useState,
+} from 'react';
+import { MappedConst, Point } from './interface';
 import { getPoint } from './libs/get-point';
-import { CanvasStyle, DEFAULT_CANVAS_STYLE } from './interface';
+import { CanvasDrawingStyle } from './interface';
 import { linerInterpolationByPressure } from './libs/liner-interpolation';
 
 type DrawEvent =
@@ -15,9 +20,11 @@ export type Props = {
   onChange?: (out: { lines: Point[][]; imgUrl: string }) => void;
 };
 
-type CanvasLayerName = 'DRAWING_HISTORY' | 'TMP' | 'USER_INTERFACE';
+export interface IDrawLineHandle {
+  eraseAllCanvas(): void;
+}
 
-type MappedConst<T extends string> = { [key in T]: key };
+type CanvasLayerName = 'DRAWING_HISTORY' | 'TMP' | 'USER_INTERFACE';
 
 const CANVAS_LAYER: MappedConst<CanvasLayerName> = {
   DRAWING_HISTORY: 'DRAWING_HISTORY',
@@ -32,17 +39,24 @@ type CanvasLayerRefs = {
   [key in keyof typeof CANVAS_LAYER]: React.MutableRefObject<HTMLCanvasElement | null>;
 };
 
-const CANVAS_COMMON_STYLE: React.CSSProperties = {
-  display: 'block',
-  position: 'absolute',
+const CANVAS_CONTEXT_STYLE: CanvasDrawingStyle = {
+  lineWidth: 10,
+  lineCap: 'round',
+  lineJoin: 'round',
+  strokeStyle: '#000',
 };
 
-const CANVAS_CONTEXT_STYLE: CanvasStyle = {
-  ...DEFAULT_CANVAS_STYLE,
-};
-
-export const DrawLine = (props: Props): JSX.Element => {
+const DrawLine: React.ForwardRefRenderFunction<IDrawLineHandle, Props> = (
+  props: Props,
+  ref
+): JSX.Element => {
   const containerRef = useRef<HTMLDivElement | null>(null);
+
+  useImperativeHandle(ref, () => ({
+    eraseAllCanvas: () => {
+      eraseAllCanvas();
+    },
+  }));
 
   const canvasRefs: CanvasLayerRefs = {
     DRAWING_HISTORY: useRef<HTMLCanvasElement | null>(null),
@@ -53,7 +67,7 @@ export const DrawLine = (props: Props): JSX.Element => {
   const [ctxTranslated, setCtxTranslated] = useState(false);
 
   // ポインターが移動した事を示すフラグ
-  let pointerHasMoved = false;
+  // const [pointerHasMoved, setPointerHasMoved] = useState(false);
 
   // 線を引いているフラグ
   const [drawingStarted, setDrawingStarted] = useState(false);
@@ -64,7 +78,20 @@ export const DrawLine = (props: Props): JSX.Element => {
   // 引いている線を表現する整形済みポイントの配列
   const [points, setPoints] = useState<Point[]>([]);
 
-  // TODO: 全消し機能
+  // 全消し機能www
+  const eraseAllCanvas = () => {
+    setPoints([]);
+    setLines([]);
+    layerNames.forEach((k) => {
+      const canvasEl = canvasRefs[k].current;
+      if (!canvasEl) return;
+      const ctx = canvasEl.getContext('2d');
+      if (!ctx) return;
+      ctx.clearRect(0, 0, props.canvasWidth, props.canvasHeight);
+    });
+    handleOnChange();
+  };
+
   // TODO: リサイズ機能
   // TODO: 復元機能? (描画済み画像を受け取って背景画像として読み込み)
 
@@ -78,7 +105,7 @@ export const DrawLine = (props: Props): JSX.Element => {
     addPoint(getPoint(e.nativeEvent));
     drawPoints();
 
-    pointerHasMoved = true;
+    // setPointerHasMoved(true);
   };
 
   const handleDrawMove = (e: DrawEvent) => {
@@ -89,7 +116,7 @@ export const DrawLine = (props: Props): JSX.Element => {
     addPoint(getPoint(e.nativeEvent, points[points.length - 1]));
     drawPoints();
 
-    pointerHasMoved = true;
+    // setPointerHasMoved(true);
   };
 
   const handleDrawEnd = (e: DrawEvent) => {
@@ -104,7 +131,7 @@ export const DrawLine = (props: Props): JSX.Element => {
     clearCanvas(['TMP']);
 
     setDrawingStarted(false);
-    pointerHasMoved = true;
+    // setPointerHasMoved(true);
 
     handleOnChange();
   };
@@ -198,7 +225,7 @@ export const DrawLine = (props: Props): JSX.Element => {
   };
 
   // const loop = (once = false) => {
-  //   pointerHasMoved = false;
+  //   setPointerHasMoved(false);
   //   if (!once) {
   //     window.requestAnimationFrame(() => {
   //       loop();
@@ -225,7 +252,7 @@ export const DrawLine = (props: Props): JSX.Element => {
           <canvas
             ref={casnvasRef}
             key={layerName}
-            style={{ ...CANVAS_COMMON_STYLE }}
+            style={{ display: 'block', position: 'absolute' }}
             width={props.canvasWidth}
             height={props.canvasHeight}
             onMouseDown={isInterface ? handleDrawStart : undefined}
@@ -243,4 +270,6 @@ export const DrawLine = (props: Props): JSX.Element => {
   );
 };
 
-export default DrawLine;
+const WrappedDrawLine = forwardRef(DrawLine);
+
+export default WrappedDrawLine;

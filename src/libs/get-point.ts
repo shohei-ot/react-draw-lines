@@ -1,4 +1,4 @@
-import { Point } from '../interface';
+import { Point } from '..';
 
 export const getPoint = (
   ev: MouseEvent | TouchEvent,

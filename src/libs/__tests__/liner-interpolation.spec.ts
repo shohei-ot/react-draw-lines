@@ -2,7 +2,7 @@ import {
   linerInterpolation,
   linerInterpolationByPressure,
 } from '../liner-interpolation';
-import { Point } from '../../interface';
+import { Point } from '../..';
 
 describe('liner-interpolation', () => {
   test('linerInterpolationWithPressure', () => {

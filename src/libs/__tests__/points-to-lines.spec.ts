@@ -8,31 +8,37 @@ describe('points to lines', () => {
         x: 0,
         y: 0,
         force: 0,
+        identifier: 0,
       },
       {
         x: 1,
         y: 10,
         force: 0.1,
+        identifier: 0,
       },
       {
         x: 2,
         y: 20,
         force: 0.2,
+        identifier: 0,
       },
       {
         x: 3,
         y: 30,
         force: 0.3,
+        identifier: 0,
       },
       {
         x: 4,
         y: 40,
         force: 0.4,
+        identifier: 0,
       },
       {
         x: 5,
         y: 50,
         force: 0.5,
+        identifier: 0,
       },
     ];
     const expectedLines: Line[] = [
@@ -41,11 +47,13 @@ describe('points to lines', () => {
           x: 0,
           y: 0,
           force: 0,
+          identifier: 0,
         },
         end: {
           x: 1,
           y: 10,
           force: 0.1,
+          identifier: 0,
         },
       },
       {
@@ -53,11 +61,13 @@ describe('points to lines', () => {
           x: 1,
           y: 10,
           force: 0.1,
+          identifier: 0,
         },
         end: {
           x: 2,
           y: 20,
           force: 0.2,
+          identifier: 0,
         },
       },
       {
@@ -65,11 +75,13 @@ describe('points to lines', () => {
           x: 2,
           y: 20,
           force: 0.2,
+          identifier: 0,
         },
         end: {
           x: 3,
           y: 30,
           force: 0.3,
+          identifier: 0,
         },
       },
       {
@@ -77,11 +89,13 @@ describe('points to lines', () => {
           x: 3,
           y: 30,
           force: 0.3,
+          identifier: 0,
         },
         end: {
           x: 4,
           y: 40,
           force: 0.4,
+          identifier: 0,
         },
       },
       {
@@ -89,11 +103,13 @@ describe('points to lines', () => {
           x: 4,
           y: 40,
           force: 0.4,
+          identifier: 0,
         },
         end: {
           x: 5,
           y: 50,
           force: 0.5,
+          identifier: 0,
         },
       },
     ];

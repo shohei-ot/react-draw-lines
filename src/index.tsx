@@ -1,194 +1,275 @@
-import React, { FC, useState } from 'react';
-import { Line, Point, Stroke } from './interface';
-import { Presenter } from './presenter';
+import React, {
+  forwardRef,
+  useImperativeHandle,
+  useRef,
+  useState,
+} from 'react';
+import { MappedConst, Point } from './interface';
+import { getPoint } from './libs/get-point';
+import { CanvasDrawingStyle } from './interface';
+import { linerInterpolationByPressure } from './libs/liner-interpolation';
 
-let INSTANCE_ID_SEQUENCE_POINT = 0;
+type DrawEvent =
+  | React.MouseEvent<HTMLCanvasElement, MouseEvent>
+  | React.TouchEvent<HTMLCanvasElement>;
 
 export type Props = {
-  width: number;
-  height: number;
-  onDraw?: (imgBase64: string) => void;
+  canvasWidth: number;
+  canvasHeight: number;
+  backgroundColor?: string;
+  onChange?: (out: { lines: Point[][]; imgUrl: string }) => void;
 };
 
-export const ReactDrawLines: FC<Props> = (props: Props): JSX.Element => {
-  const [instanceId] = useState(INSTANCE_ID_SEQUENCE_POINT++);
-  const [drawingFlag, setDrawingFlag] = useState(false);
-  const [strokes, setStrokes] = useState<Stroke[]>([]);
-  const [currentStroke, setCurrentStroke] = useState<Stroke | null>(null);
-  // const [currentLines, setCurrentLines] = useState<Partial<Line> | null>(null);
+export interface IDrawLineHandle {
+  eraseAllCanvas(): void;
+}
 
-  // TODO: 各 TouchEvent 毎に処理を作る
-  // 1. touchstart, mousedown: touchstart flag を true + currentStroke, currentLine 開始
-  // 2. touchmove, mousemove: touchstart flag が true なら座標取得, currentLines に追加しつつ currentStroke を更新していく。
-  // 3. touchend, mouseup: touchstart flag が true なら座標取得, currentLine を完了して currentStroke を更新 + touchstart flag を false
-  // 4. touchcancel: touchstart flag が true なら touchstart flag を false + 現在の Stroke を削除
+type CanvasLayerName = 'DRAWING_HISTORY' | 'TMP' | 'USER_INTERFACE';
 
-  const onTouchStart = (e: HTMLElementEventMap['touchstart']) => {
-    setDrawingFlag(true);
-    const point = getPoint(e.touches[0]);
-    startStroke(point);
+const CANVAS_LAYER: MappedConst<CanvasLayerName> = {
+  DRAWING_HISTORY: 'DRAWING_HISTORY',
+  TMP: 'TMP',
+  USER_INTERFACE: 'USER_INTERFACE',
+};
+
+const layerNames: Array<keyof typeof CANVAS_LAYER> =
+  Object.values(CANVAS_LAYER);
+
+type CanvasLayerRefs = {
+  [key in keyof typeof CANVAS_LAYER]: React.MutableRefObject<HTMLCanvasElement | null>;
+};
+
+const CANVAS_CONTEXT_STYLE: CanvasDrawingStyle = {
+  lineWidth: 10,
+  lineCap: 'round',
+  lineJoin: 'round',
+  strokeStyle: '#000',
+};
+
+const DrawLine: React.ForwardRefRenderFunction<IDrawLineHandle, Props> = (
+  props: Props,
+  ref
+): JSX.Element => {
+  const containerRef = useRef<HTMLDivElement | null>(null);
+
+  useImperativeHandle(ref, () => ({
+    eraseAllCanvas: () => {
+      eraseAllCanvas();
+    },
+  }));
+
+  const canvasRefs: CanvasLayerRefs = {
+    DRAWING_HISTORY: useRef<HTMLCanvasElement | null>(null),
+    TMP: useRef<HTMLCanvasElement | null>(null),
+    USER_INTERFACE: useRef<HTMLCanvasElement | null>(null),
   };
 
-  const onTouchMove = (e: HTMLElementEventMap['touchmove']) => {
-    if (!drawingFlag) return;
-    if (!currentStroke) throw new Error('currentStroke が初期化されていません');
+  const [ctxTranslated, setCtxTranslated] = useState(false);
 
-    const currentPoint = getPoint(e.touches[0]);
-    const startPoint = getPrevPoint(currentStroke);
+  // ポインターが移動した事を示すフラグ
+  // const [pointerHasMoved, setPointerHasMoved] = useState(false);
 
-    addStrokeLines([{ start: startPoint, end: currentPoint }]);
+  // 線を引いているフラグ
+  const [drawingStarted, setDrawingStarted] = useState(false);
+
+  // 引かれた線
+  const [lines, setLines] = useState<Point[][]>([]);
+
+  // 引いている線を表現する整形済みポイントの配列
+  const [points, setPoints] = useState<Point[]>([]);
+
+  // 全消し機能www
+  const eraseAllCanvas = () => {
+    setPoints([]);
+    setLines([]);
+    layerNames.forEach((k) => {
+      const canvasEl = canvasRefs[k].current;
+      if (!canvasEl) return;
+      const ctx = canvasEl.getContext('2d');
+      if (!ctx) return;
+      ctx.clearRect(0, 0, props.canvasWidth, props.canvasHeight);
+    });
+    handleOnChange();
   };
 
-  const onTouchEnd = (e: HTMLElementEventMap['touchend']) => {
-    if (!drawingFlag) return;
-    if (!currentStroke) throw new Error('currentStroke が初期化されていません');
+  // TODO: リサイズ機能
+  // TODO: 復元機能? (描画済み画像を受け取って背景画像として読み込み)
 
-    const currentPoint = getPoint(e.touches[0]);
-
-    endStroke(currentPoint);
-    setDrawingFlag(false);
-
-    const target = e.target as HTMLCanvasElement | null;
-    if (!target) throw new Error('ev.target が不在');
-    onDrawHandler(target);
-  };
-
-  const onDrawHandler = (canvasEl: HTMLCanvasElement) => {
-    const image = canvasEl.toDataURL();
-    props.onDraw && props.onDraw(image);
-  };
-
-  // const onTouchCancel = (e: HTMLElementEventMap['touchcancel']) => {
-  const onTouchCancel = () => {
-    if (!drawingFlag) return;
-    // if (!currentStroke) throw new Error('currentStroke が初期化されていません');
-    if (!currentStroke) return;
-
-    clearTmpDrawing();
-    setDrawingFlag(false);
-  };
-
-  const onMouseDown = (e: HTMLElementEventMap['mousedown']) => {
-    setDrawingFlag(true);
-    const point = getPoint(e);
-    startStroke(point);
-  };
-
-  const onMouseMove = (e: HTMLElementEventMap['mousemove']) => {
-    if (!drawingFlag) return;
-    if (!currentStroke) throw new Error('currentStroke が初期化されていません');
-
-    const currentPoint = getPoint(e);
-    const startPoint = getPrevPoint(currentStroke);
-
-    addStrokeLines([{ start: startPoint, end: currentPoint }]);
-  };
-
-  const onMouseUp = (e: HTMLElementEventMap['mouseup']) => {
-    if (!drawingFlag) return;
-    if (!currentStroke) throw new Error('currentStroke が初期化されていません');
-
-    const currentPoint = getPoint(e);
-
-    endStroke(currentPoint);
-    setDrawingFlag(false);
-
-    const target = e.target as HTMLCanvasElement | null;
-    if (!target) throw new Error('ev.target が不在');
-    onDrawHandler(target);
-  };
-
-  const getPrevPoint = (stroke: Stroke) => {
-    const initialLine = stroke ? stroke.lines.length === 0 : false;
-    if (initialLine) {
-      return {
-        x: stroke.startX,
-        y: stroke.startY,
-        force: stroke.startForce,
-      };
+  const handleDrawStart = (e: DrawEvent) => {
+    if (drawingStarted) {
+      return;
     }
-    return stroke.lines[stroke.lines.length - 1].end;
+
+    setDrawingStarted(true);
+
+    addPoint(getPoint(e.nativeEvent));
+    drawPoints();
+
+    // setPointerHasMoved(true);
   };
 
-  const startStroke = (start: Point): Stroke => {
-    if (currentStroke) {
-      throw new Error(
-        'currentStroke が有るのに startStroke() が呼び出されました。'
+  const handleDrawMove = (e: DrawEvent) => {
+    if (!drawingStarted) {
+      return;
+    }
+
+    addPoint(getPoint(e.nativeEvent, points[points.length - 1]));
+    drawPoints();
+
+    // setPointerHasMoved(true);
+  };
+
+  const handleDrawEnd = (e: DrawEvent) => {
+    if (!drawingStarted) {
+      return;
+    }
+
+    addPoint(getPoint(e.nativeEvent, points[points.length - 1]));
+    drawPoints();
+    savePointsToLine();
+    transcribeTmpToDrawingHistory();
+    clearCanvas(['TMP']);
+
+    setDrawingStarted(false);
+    // setPointerHasMoved(true);
+
+    handleOnChange();
+  };
+
+  const handleOnChange = () => {
+    if (!props.onChange) return;
+
+    const canvas = canvasRefs.DRAWING_HISTORY.current;
+    if (!canvas) return;
+
+    const imgUrl = canvas.toDataURL('image/png');
+    props.onChange({ lines: JSON.parse(JSON.stringify(lines)), imgUrl });
+  };
+
+  const addPoint = (point: Point) => {
+    if (points.length === 0) {
+      points.push(point);
+      setPoints([...points]);
+    } else {
+      const organizedPoints = linerInterpolationByPressure(
+        points[points.length - 1],
+        point
       );
+      points.push(...organizedPoints);
+      setPoints([...points]);
     }
-    const stroke = {
-      startX: start.x,
-      startY: start.y,
-      startForce: start.force,
-      lines: [],
-      endX: 0,
-      endY: 0,
-      endForce: undefined,
-    };
-    setCurrentStroke(stroke);
-    return stroke;
   };
 
-  const getPoint = (ev: MouseEvent | Touch): Point => {
-    const target = ev.target as HTMLCanvasElement | null;
-    if (!target) throw new Error('ev.target が不在');
+  const drawPoints = () => {
+    if (points.length === 0) return;
+    if (!canvasRefs.TMP.current) return;
+    const tmpCtx = canvasRefs.TMP.current.getContext('2d');
+    if (!tmpCtx) return;
 
-    const rect = target.getBoundingClientRect();
+    const isFirstPoint = points.length === 1;
 
-    const x = ev.pageX - rect.left;
-    const y = ev.pageY - rect.top;
-    const force = 'force' in ev ? ev.force : 1;
+    const prevPoint = isFirstPoint ? points[0] : points[points.length - 2];
+    const latestPoint = points[points.length - 1];
 
-    return {
-      x,
-      y,
-      force,
-    };
-  };
-
-  const addStrokeLines = (lines: Line[]): Stroke => {
-    if (!currentStroke) {
-      throw new Error(
-        'currentStroke が無いのに endStroke() が呼び出されました。'
-      );
+    if (!ctxTranslated) {
+      tmpCtx.translate(0.5, 0.5);
+      setCtxTranslated(true);
     }
-    currentStroke.lines.push(...lines);
-    setCurrentStroke(currentStroke);
-    return currentStroke;
-  };
 
-  const endStroke = (point: Point) => {
-    if (!currentStroke) {
-      throw new Error(
-        'currentStroke が無いのに endStroke() が呼び出されました。'
-      );
+    if (isFirstPoint) {
+      tmpCtx.beginPath();
     }
-    currentStroke.endX = point.x;
-    currentStroke.endY = point.y;
-    currentStroke.endForce = point.force;
-    strokes.push(currentStroke);
-    setStrokes(strokes);
-    clearTmpDrawing();
+
+    // canvas styles
+    // FIXME: 筆圧の取り扱い
+    tmpCtx.lineWidth = CANVAS_CONTEXT_STYLE.lineWidth * latestPoint.force;
+    tmpCtx.lineCap = CANVAS_CONTEXT_STYLE.lineCap;
+    tmpCtx.lineJoin = CANVAS_CONTEXT_STYLE.lineJoin;
+    tmpCtx.strokeStyle = CANVAS_CONTEXT_STYLE.strokeStyle;
+
+    tmpCtx.moveTo(prevPoint.x, prevPoint.y);
+    tmpCtx.lineTo(latestPoint.x, latestPoint.y);
+
+    tmpCtx.stroke();
   };
 
-  const clearTmpDrawing = () => {
-    // setCurrentLines(null);
-    setCurrentStroke(null);
+  const savePointsToLine = () => {
+    lines.push([...points]);
+    setLines([...lines]);
+    setPoints([]);
   };
+
+  const transcribeTmpToDrawingHistory = () => {
+    if (!canvasRefs.DRAWING_HISTORY.current || !canvasRefs.TMP.current) return;
+
+    const tmpCtx = canvasRefs.TMP.current.getContext('2d');
+    const historyCtx = canvasRefs.DRAWING_HISTORY.current.getContext('2d');
+    if (!historyCtx || !tmpCtx) return;
+
+    historyCtx.drawImage(
+      tmpCtx.canvas,
+      0,
+      0,
+      props.canvasWidth,
+      props.canvasHeight
+    );
+  };
+
+  const clearCanvas = (keys: CanvasLayerName[]) => {
+    keys.forEach((k) => {
+      if (!canvasRefs[k].current) return;
+      const ctx = canvasRefs[k].current?.getContext('2d');
+      if (!ctx) return;
+      ctx.clearRect(0, 0, props.canvasWidth, props.canvasHeight);
+    });
+  };
+
+  // const loop = (once = false) => {
+  //   setPointerHasMoved(false);
+  //   if (!once) {
+  //     window.requestAnimationFrame(() => {
+  //       loop();
+  //     });
+  //   }
+  // };
 
   return (
-    <Presenter
-      canvasId={`react-draw-lines-${instanceId}`}
-      onTouchStart={onTouchStart}
-      onTouchMove={onTouchMove}
-      onTouchEnd={onTouchEnd}
-      onTouchCancel={onTouchCancel}
-      onMouseDown={onMouseDown}
-      onMouseMove={onMouseMove}
-      onMouseUp={onMouseUp}
-      lineStrokes={strokes}
-      width={props.width}
-      height={props.height}
-    />
+    <div
+      ref={containerRef}
+      style={{
+        position: 'relative',
+        display: 'block',
+        width: `${props.canvasWidth}px`,
+        height: `${props.canvasHeight}px`,
+        touchAction: 'none',
+        backgroundColor: props.backgroundColor,
+      }}
+    >
+      {layerNames.map((layerName) => {
+        const isInterface = layerName === CANVAS_LAYER.USER_INTERFACE;
+        const casnvasRef = canvasRefs[layerName];
+        return (
+          <canvas
+            ref={casnvasRef}
+            key={layerName}
+            style={{ display: 'block', position: 'absolute' }}
+            width={props.canvasWidth}
+            height={props.canvasHeight}
+            onMouseDown={isInterface ? handleDrawStart : undefined}
+            onMouseMove={isInterface ? handleDrawMove : undefined}
+            onMouseUp={isInterface ? handleDrawEnd : undefined}
+            onMouseLeave={isInterface ? handleDrawEnd : undefined}
+            onTouchStart={isInterface ? handleDrawStart : undefined}
+            onTouchMove={isInterface ? handleDrawMove : undefined}
+            onTouchEnd={isInterface ? handleDrawEnd : undefined}
+            onTouchCancel={isInterface ? handleDrawEnd : undefined}
+          />
+        );
+      })}
+    </div>
   );
 };
+
+const WrappedDrawLine = forwardRef(DrawLine);
+
+export default WrappedDrawLine;

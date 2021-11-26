@@ -1,7 +1,8 @@
 export type Point = {
   x: number;
   y: number;
-  force?: number; // 0.0 ~ 1.0
+  force: number; // 0.0 ~ 1.0
+  identifier: number;
 };
 
 export type Line = {
@@ -19,7 +20,7 @@ export type CanvasStyle = {
 const ROUND = 'round';
 
 export const DEFAULT_CANVAS_STYLE: Readonly<CanvasStyle> = {
-  lineWidth: 5,
+  lineWidth: 10,
   lineCap: ROUND,
   lineJoin: ROUND,
   strokeStyle: '#000',

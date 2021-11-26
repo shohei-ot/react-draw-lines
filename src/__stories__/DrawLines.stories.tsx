@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import { Meta, Story } from '@storybook/react';
 import { DrawLine, Props } from '../';
 
@@ -9,7 +9,8 @@ export default {
 
 export const Base: Story<Props> = (args: Props) => {
   const imgRef = useRef<HTMLImageElement | null>(null);
-  const handleOnChange = (imgUrl) => {
+  const handleOnChange = ({ lines, imgUrl }) => {
+    console.log({ lines, imgUrl });
     const imgEl = imgRef.current;
     if (!imgEl) return;
     imgEl.src = imgUrl;

@@ -239,7 +239,12 @@ const DrawLine: React.ForwardRefRenderFunction<IDrawLineHandle, Props> = (
       if (!canvasRefs[k].current) return;
       const ctx = canvasRefs[k].current?.getContext('2d');
       if (!ctx) return;
-      ctx.clearRect(0, 0, props.canvasWidth, props.canvasHeight);
+      ctx.clearRect(
+        -0.5,
+        -0.5,
+        props.canvasWidth + 0.5,
+        props.canvasHeight + 0.5
+      );
     });
   };
 

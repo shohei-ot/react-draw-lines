@@ -22,7 +22,7 @@ export type Props = {
   usePressure?: boolean; // for touch control
   lineWidth?: number; // default: 10
   minLineWidth?: number; // default: 1
-  strokeStyle?: string; // default: #000
+  strokeStyle?: string; // Stroke Color. default: #000
   canvasBackgroundImg?: HTMLImageElement; // url
   lineCap?: CanvasLineCap; // default: round
   lineJoin?: CanvasLineJoin; // default: round

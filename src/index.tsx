@@ -1,11 +1,40 @@
 import React, {
   forwardRef,
+  useEffect,
   useImperativeHandle,
   useRef,
   useState,
 } from 'react';
 import { getPoint } from './libs/get-point';
 import { linerInterpolationByPressure } from './libs/liner-interpolation';
+
+export type Props = {
+  // canvas[width]
+  canvasWidth: number;
+  // canvas[height]
+  canvasHeight: number;
+  // div.container[style="background-color: {HERE} ;"]
+  backgroundColor?: string;
+  // onChange?: (out: { lines: Point[][]; imgUrl: string }) => void;
+  onChange?: (out: { imgUrl: string }) => void;
+
+  // canvas drawing options
+  usePressure?: boolean; // for touch control
+  lineWidth?: number; // default: 10
+  minLineWidth?: number; // default: 1
+  strokeStyle?: string; // default: #000
+  canvasBackgroundImg?: HTMLImageElement; // url
+  lineCap?: CanvasLineCap; // default: round
+  lineJoin?: CanvasLineJoin; // default: round
+};
+
+const CANVAS_CONTEXT_STYLE: CanvasDrawingStyle = {
+  lineWidth: 10,
+  minLineWidth: 1,
+  lineCap: 'round',
+  lineJoin: 'round',
+  strokeStyle: '#000',
+};
 
 export type Point = {
   x: number;
@@ -21,6 +50,7 @@ export type Line = {
 
 export type CanvasDrawingStyle = {
   lineWidth: number;
+  minLineWidth: number;
   strokeStyle: string;
   lineCap: CanvasLineCap;
   lineJoin: CanvasLineJoin;
@@ -31,13 +61,6 @@ export type MappedConst<T extends string> = { [key in T]: key };
 type DrawEvent =
   | React.MouseEvent<HTMLCanvasElement, MouseEvent>
   | React.TouchEvent<HTMLCanvasElement>;
-
-export type Props = {
-  canvasWidth: number;
-  canvasHeight: number;
-  backgroundColor?: string;
-  onChange?: (out: { lines: Point[][]; imgUrl: string }) => void;
-};
 
 export interface IDrawLineHandle {
   eraseAllCanvas(): void;
@@ -56,13 +79,6 @@ const layerNames: Array<keyof typeof CANVAS_LAYER> =
 
 type CanvasLayerRefs = {
   [key in keyof typeof CANVAS_LAYER]: React.MutableRefObject<HTMLCanvasElement | null>;
-};
-
-const CANVAS_CONTEXT_STYLE: CanvasDrawingStyle = {
-  lineWidth: 10,
-  lineCap: 'round',
-  lineJoin: 'round',
-  strokeStyle: '#000',
 };
 
 const DrawLine: React.ForwardRefRenderFunction<IDrawLineHandle, Props> = (
@@ -97,6 +113,27 @@ const DrawLine: React.ForwardRefRenderFunction<IDrawLineHandle, Props> = (
   // 引いている線を表現する整形済みポイントの配列
   const [points, setPoints] = useState<Point[]>([]);
 
+  const setCanvasBackgroundImg = (imgEl: HTMLImageElement) => {
+    const bgCanvasEl = canvasRefs.DRAWING_HISTORY.current;
+    if (!bgCanvasEl) {
+      return;
+    }
+
+    const bgCanvasCtx = bgCanvasEl.getContext('2d');
+    if (!bgCanvasCtx) {
+      return;
+    }
+
+    bgCanvasCtx.drawImage(imgEl, 0, 0, imgEl.width, imgEl.height);
+  };
+
+  useEffect(() => {
+    if (props.canvasBackgroundImg) {
+      setCanvasBackgroundImg(props.canvasBackgroundImg);
+      handleOnChange();
+    }
+  }, [props.canvasBackgroundImg]);
+
   // 全消し機能www
   const eraseAllCanvas = () => {
     setPoints([]);
@@ -112,7 +149,6 @@ const DrawLine: React.ForwardRefRenderFunction<IDrawLineHandle, Props> = (
   };
 
   // TODO: リサイズ機能
-  // TODO: 復元機能? (描画済み画像を受け取って背景画像として読み込み)
 
   const handleDrawStart = (e: DrawEvent) => {
     if (drawingStarted) {
@@ -162,7 +198,7 @@ const DrawLine: React.ForwardRefRenderFunction<IDrawLineHandle, Props> = (
     if (!canvas) return;
 
     const imgUrl = canvas.toDataURL('image/png');
-    props.onChange({ lines: JSON.parse(JSON.stringify(lines)), imgUrl });
+    props.onChange({ imgUrl });
   };
 
   const addPoint = (point: Point) => {
@@ -200,11 +236,12 @@ const DrawLine: React.ForwardRefRenderFunction<IDrawLineHandle, Props> = (
     }
 
     // canvas styles
-    // FIXME: 筆圧の取り扱い
-    tmpCtx.lineWidth = CANVAS_CONTEXT_STYLE.lineWidth * latestPoint.force;
-    tmpCtx.lineCap = CANVAS_CONTEXT_STYLE.lineCap;
-    tmpCtx.lineJoin = CANVAS_CONTEXT_STYLE.lineJoin;
-    tmpCtx.strokeStyle = CANVAS_CONTEXT_STYLE.strokeStyle;
+    tmpCtx.lineWidth =
+      (props.lineWidth ?? CANVAS_CONTEXT_STYLE.lineWidth) *
+      (props.usePressure ? latestPoint.force : 1);
+    tmpCtx.lineCap = props.lineCap ?? CANVAS_CONTEXT_STYLE.lineCap;
+    tmpCtx.lineJoin = props.lineJoin ?? CANVAS_CONTEXT_STYLE.lineJoin;
+    tmpCtx.strokeStyle = props.strokeStyle ?? CANVAS_CONTEXT_STYLE.strokeStyle;
 
     tmpCtx.moveTo(prevPoint.x, prevPoint.y);
     tmpCtx.lineTo(latestPoint.x, latestPoint.y);
@@ -239,12 +276,7 @@ const DrawLine: React.ForwardRefRenderFunction<IDrawLineHandle, Props> = (
       if (!canvasRefs[k].current) return;
       const ctx = canvasRefs[k].current?.getContext('2d');
       if (!ctx) return;
-      ctx.clearRect(
-        -0.5,
-        -0.5,
-        props.canvasWidth + 0.5,
-        props.canvasHeight + 0.5
-      );
+      ctx.clearRect(-0.5, -0.5, props.canvasWidth, props.canvasHeight);
     });
   };
 

@@ -33,8 +33,8 @@ export const getPoint = (
 
   const rect = target.getBoundingClientRect();
 
-  const x = e.pageX - rect.left;
-  const y = e.pageY - rect.top;
+  const x = 'offsetX' in e ? e.offsetX : e.clientX - rect.left;
+  const y = 'offsetY' in e ? e.offsetY : e.clientY - rect.top;
   const force = 'force' in e ? e.force : 1;
   const identifier = 'identifier' in e ? e.identifier : 0;
 
@@ -44,8 +44,5 @@ export const getPoint = (
     force,
     identifier,
   };
-
-  // console.log('point', JSON.stringify(point));
-
   return point;
 };

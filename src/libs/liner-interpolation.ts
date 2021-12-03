@@ -1,11 +1,6 @@
 import { Point } from '../interface';
 import { linerInterpolation } from './line-organizer/interpolation/liner-interpolation';
 
-type XyPoint = {
-  x: number;
-  y: number;
-};
-
 const PRESSURE_STEP_NUM = 0.1;
 const ROUND_UNIT = 10;
 

@@ -6,7 +6,6 @@ import React, {
   useState,
 } from 'react';
 import { getPoint } from './libs/get-point';
-import { linerInterpolationByPressure } from './libs/liner-interpolation';
 import {
   CanvasDrawingStyle,
   CanvasLayerName,
@@ -207,10 +206,6 @@ const DrawLine: React.ForwardRefRenderFunction<IDrawLineHandle, Props> = (
       points.push(point);
       setPoints([...points]);
     } else {
-      // const organizedPoints = linerInterpolationByPressure(
-      //   points[points.length - 1],
-      //   point
-      // );
       points.push(point);
 
       const organizedPoints = lineOrganizer(points);
@@ -268,39 +263,39 @@ const DrawLine: React.ForwardRefRenderFunction<IDrawLineHandle, Props> = (
     tmpCtx.stroke();
   };
 
-  const drawDiffLine = () => {
-    if (points.length === 0) return;
-    if (!canvasRefs.TMP.current) return;
-    const tmpCtx = canvasRefs.TMP.current.getContext('2d');
-    if (!tmpCtx) return;
+  // const drawDiffLine = () => {
+  //   if (points.length === 0) return;
+  //   if (!canvasRefs.TMP.current) return;
+  //   const tmpCtx = canvasRefs.TMP.current.getContext('2d');
+  //   if (!tmpCtx) return;
 
-    const isFirstPoint = points.length === 1;
+  //   const isFirstPoint = points.length === 1;
 
-    const prevPoint = isFirstPoint ? points[0] : points[points.length - 2];
-    const latestPoint = points[points.length - 1];
+  //   const prevPoint = isFirstPoint ? points[0] : points[points.length - 2];
+  //   const latestPoint = points[points.length - 1];
 
-    if (!ctxTranslated) {
-      tmpCtx.translate(CANVAS_TRANSLATE, CANVAS_TRANSLATE);
-      setCtxTranslated(true);
-    }
+  //   if (!ctxTranslated) {
+  //     tmpCtx.translate(CANVAS_TRANSLATE, CANVAS_TRANSLATE);
+  //     setCtxTranslated(true);
+  //   }
 
-    if (isFirstPoint) {
-      tmpCtx.beginPath();
-    }
+  //   if (isFirstPoint) {
+  //     tmpCtx.beginPath();
+  //   }
 
-    // canvas styles
-    tmpCtx.lineWidth =
-      (props.lineWidth ?? CANVAS_CONTEXT_STYLE.lineWidth) *
-      (props.usePressure ? latestPoint.force : 1);
-    tmpCtx.lineCap = props.lineCap ?? CANVAS_CONTEXT_STYLE.lineCap;
-    tmpCtx.lineJoin = props.lineJoin ?? CANVAS_CONTEXT_STYLE.lineJoin;
-    tmpCtx.strokeStyle = props.strokeStyle ?? CANVAS_CONTEXT_STYLE.strokeStyle;
+  //   // canvas styles
+  //   tmpCtx.lineWidth =
+  //     (props.lineWidth ?? CANVAS_CONTEXT_STYLE.lineWidth) *
+  //     (props.usePressure ? latestPoint.force : 1);
+  //   tmpCtx.lineCap = props.lineCap ?? CANVAS_CONTEXT_STYLE.lineCap;
+  //   tmpCtx.lineJoin = props.lineJoin ?? CANVAS_CONTEXT_STYLE.lineJoin;
+  //   tmpCtx.strokeStyle = props.strokeStyle ?? CANVAS_CONTEXT_STYLE.strokeStyle;
 
-    tmpCtx.moveTo(prevPoint.x, prevPoint.y);
-    tmpCtx.lineTo(latestPoint.x, latestPoint.y);
+  //   tmpCtx.moveTo(prevPoint.x, prevPoint.y);
+  //   tmpCtx.lineTo(latestPoint.x, latestPoint.y);
 
-    tmpCtx.stroke();
-  };
+  //   tmpCtx.stroke();
+  // };
 
   const savePointsToLine = () => {
     lines.push([...interpolatedPoints]);

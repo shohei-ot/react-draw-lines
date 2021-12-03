@@ -18,6 +18,7 @@ import {
 import { lineOrganizer } from './libs/line-organizer';
 
 export type Props = {
+  id?: string;
   canvasWidth: number;
   canvasHeight: number;
   backgroundColor?: string; // container background color
@@ -349,6 +350,7 @@ const DrawLine: React.ForwardRefRenderFunction<IDrawLineHandle, Props> = (
 
   return (
     <div
+      id={props.id}
       ref={containerRef}
       style={{
         position: 'relative',

@@ -25,7 +25,7 @@
     ],
     "*.json": "prettier --write"
   },
-  "author": "Shohei Ohta <sota@thomas-gr.com>",
+  "author": "Shohei Ohta <shohei.ot@gmail.com>",
   "repository": {
     "type": "git",
     "url": "git@github.com:shohei-ot/react-draw-lines.git"

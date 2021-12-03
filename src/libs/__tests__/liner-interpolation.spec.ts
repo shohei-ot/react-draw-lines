@@ -1,8 +1,6 @@
-import {
-  linerInterpolation,
-  linerInterpolationByPressure,
-} from '../liner-interpolation';
-import { Point } from '../..';
+import { Point } from '../../interface';
+import { linerInterpolation } from '../line-organizer/interpolation/liner-interpolation';
+import { linerInterpolationByPressure } from '../liner-interpolation';
 
 describe('liner-interpolation', () => {
   test('linerInterpolationWithPressure', () => {

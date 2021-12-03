@@ -1,6 +1,7 @@
 import React, { useRef, useState } from 'react';
 import { Meta, Story } from '@storybook/react';
-import DrawLine, { Props, IDrawLineHandle } from '../';
+import DrawLine, { Props } from '../';
+import { IDrawLineHandle } from '../interface';
 
 export default {
   title: 'DrawLine',
@@ -88,8 +89,8 @@ export const Base: Story<Props> = (args: Props) => {
 };
 
 Base.args = {
-  canvasWidth: 1024,
-  canvasHeight: 700,
+  canvasWidth: 600,
+  canvasHeight: 400,
   backgroundColor: '#ddd',
   usePressure: true,
   lineWidth: 10,

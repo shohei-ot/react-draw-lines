@@ -1,4 +1,5 @@
-import { Point } from '..';
+import { Point } from '../interface';
+import { linerInterpolation } from './line-organizer/interpolation/liner-interpolation';
 
 type XyPoint = {
   x: number;
@@ -10,7 +11,8 @@ const ROUND_UNIT = 10;
 
 export const linerInterpolationByPressure = (
   start: Point,
-  end: Point
+  end: Point,
+  enablePressure = false
 ): Point[] => {
   const result: Point[] = [];
 
@@ -59,11 +61,6 @@ export const linerInterpolationByPressure = (
   result.push(end);
 
   return result;
-};
-
-export const linerInterpolation = (start: XyPoint, end: XyPoint, x: number) => {
-  if (start.x === end.x && start.x === x) return start.y;
-  return start.y + ((end.y - start.y) * (x - start.x)) / (end.x - start.x);
 };
 
 const getLoopCountFromPressure = (startPress: number, endPress: number) => {

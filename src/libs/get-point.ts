@@ -1,18 +1,17 @@
-import { Point } from '..';
+import { Point } from '../interface';
 
 export const getPoint = (
   ev: MouseEvent | TouchEvent,
-  prevPoint?: Point
+  prevIdentifier?: number
 ): Point => {
   const e = (() => {
     const isTouchEvent = 'touches' in ev;
-    const existPrevPoint =
-      prevPoint && typeof prevPoint.identifier !== 'undefined';
+    const existPrevPoint = typeof prevIdentifier !== 'undefined';
 
     if (isTouchEvent) {
       if (existPrevPoint) {
         return Array.from(ev.changedTouches).find(
-          (touch) => touch.identifier === prevPoint.identifier
+          (touch) => touch.identifier === prevIdentifier
         );
       }
       return ev.changedTouches[0];

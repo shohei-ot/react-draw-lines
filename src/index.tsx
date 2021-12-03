@@ -7,22 +7,27 @@ import React, {
 } from 'react';
 import { getPoint } from './libs/get-point';
 import { linerInterpolationByPressure } from './libs/liner-interpolation';
+import {
+  CanvasDrawingStyle,
+  CanvasLayerName,
+  DrawEvent,
+  IDrawLineHandle,
+  MappedConst,
+  Point,
+} from './interface';
+import { lineOrganizer } from './libs/line-organizer';
 
 export type Props = {
-  // canvas[width]
   canvasWidth: number;
-  // canvas[height]
   canvasHeight: number;
-  // div.container[style="background-color: {HERE} ;"]
-  backgroundColor?: string;
-  // onChange?: (out: { lines: Point[][]; imgUrl: string }) => void;
+  backgroundColor?: string; // container background color
   onChange?: (out: { imgUrl: string }) => void;
 
   // canvas drawing options
-  usePressure?: boolean; // for touch control
+  usePressure?: boolean; // for touch control (default: fales)
   lineWidth?: number; // default: 10
   minLineWidth?: number; // default: 1
-  strokeStyle?: string; // Stroke Color. default: #000
+  strokeStyle?: string; // Stroke Color. (default: #000)
   canvasBackgroundImg?: HTMLImageElement; // url
   lineCap?: CanvasLineCap; // default: round
   lineJoin?: CanvasLineJoin; // default: round
@@ -36,37 +41,8 @@ const CANVAS_CONTEXT_STYLE: CanvasDrawingStyle = {
   strokeStyle: '#000',
 };
 
-export type Point = {
-  x: number;
-  y: number;
-  force: number; // 0.0 ~ 1.0
-  identifier: number;
-};
-
-export type Line = {
-  start: Point;
-  end: Point;
-};
-
-export type CanvasDrawingStyle = {
-  lineWidth: number;
-  minLineWidth: number;
-  strokeStyle: string;
-  lineCap: CanvasLineCap;
-  lineJoin: CanvasLineJoin;
-};
-
-export type MappedConst<T extends string> = { [key in T]: key };
-
-type DrawEvent =
-  | React.MouseEvent<HTMLCanvasElement, MouseEvent>
-  | React.TouchEvent<HTMLCanvasElement>;
-
-export interface IDrawLineHandle {
-  eraseAllCanvas(): void;
-}
-
-type CanvasLayerName = 'DRAWING_HISTORY' | 'TMP' | 'USER_INTERFACE';
+// const CANVAS_TRANSLATE = 0.5;
+const CANVAS_TRANSLATE = 0.5;
 
 const CANVAS_LAYER: MappedConst<CanvasLayerName> = {
   DRAWING_HISTORY: 'DRAWING_HISTORY',
@@ -110,8 +86,14 @@ const DrawLine: React.ForwardRefRenderFunction<IDrawLineHandle, Props> = (
   // 引かれた線
   const [lines, setLines] = useState<Point[][]>([]);
 
+  // mouseDown, touchStart の point
+  const [startPoint, setStartPoint] = useState<Point | null>(null);
+
   // 引いている線を表現する整形済みポイントの配列
   const [points, setPoints] = useState<Point[]>([]);
+
+  // 補間済みのポイントの配列
+  const [interpolatedPoints, setInterpolatedPoints] = useState<Point[]>([]);
 
   const setCanvasBackgroundImg = (imgEl: HTMLImageElement) => {
     const bgCanvasEl = canvasRefs.DRAWING_HISTORY.current;
@@ -148,38 +130,52 @@ const DrawLine: React.ForwardRefRenderFunction<IDrawLineHandle, Props> = (
     handleOnChange();
   };
 
-  // TODO: リサイズ機能
-
   const handleDrawStart = (e: DrawEvent) => {
+    // console.debug('> START handleDrawStart');
     if (drawingStarted) {
+      // console.debug('> ABORT handleDrawStart');
       return;
     }
 
     setDrawingStarted(true);
 
-    addPoint(getPoint(e.nativeEvent));
+    // addPoint(getPoint(e.nativeEvent));
+    setStartPoint(getPoint(e.nativeEvent));
     drawPoints();
 
     // setPointerHasMoved(true);
+    // console.debug('> END handleDrawStart');
   };
 
   const handleDrawMove = (e: DrawEvent) => {
     if (!drawingStarted) {
       return;
     }
+    // console.debug('> START handleDrawMove');
 
-    addPoint(getPoint(e.nativeEvent, points[points.length - 1]));
+    if (!startPoint) {
+      throw new Error('startPoint が null');
+    }
+
+    addPoint(getPoint(e.nativeEvent, startPoint.identifier));
     drawPoints();
 
     // setPointerHasMoved(true);
+    // console.debug('> END handleDrawMove');
   };
 
   const handleDrawEnd = (e: DrawEvent) => {
+    // console.debug('> START handleDrawEnd');
     if (!drawingStarted) {
+      // console.debug('> ABORT handleDrawEnd');
       return;
     }
 
-    addPoint(getPoint(e.nativeEvent, points[points.length - 1]));
+    if (!startPoint) {
+      throw new Error('startPoint が null');
+    }
+
+    addPoint(getPoint(e.nativeEvent, startPoint.identifier));
     drawPoints();
     savePointsToLine();
     transcribeTmpToDrawingHistory();
@@ -189,6 +185,8 @@ const DrawLine: React.ForwardRefRenderFunction<IDrawLineHandle, Props> = (
     // setPointerHasMoved(true);
 
     handleOnChange();
+    setStartPoint(null);
+    // console.debug('> END handleDrawEnd');
   };
 
   const handleOnChange = () => {
@@ -202,20 +200,74 @@ const DrawLine: React.ForwardRefRenderFunction<IDrawLineHandle, Props> = (
   };
 
   const addPoint = (point: Point) => {
+    // console.debug('> START addPoint');
+    // console.debug('point', { ...point });
     if (points.length === 0) {
       points.push(point);
       setPoints([...points]);
     } else {
-      const organizedPoints = linerInterpolationByPressure(
-        points[points.length - 1],
-        point
-      );
-      points.push(...organizedPoints);
+      // const organizedPoints = linerInterpolationByPressure(
+      //   points[points.length - 1],
+      //   point
+      // );
+      points.push(point);
+
+      const organizedPoints = lineOrganizer(points);
+      // points.push(...organizedPoints);
+
       setPoints([...points]);
+      setInterpolatedPoints([...organizedPoints]);
     }
+    // console.debug('> END addPoint');
   };
 
   const drawPoints = () => {
+    // drawDiffLine();
+    drawAllPoints();
+  };
+
+  const drawAllPoints = async () => {
+    if (interpolatedPoints.length === 0) return;
+    // console.debug('interpolatedPoints', interpolatedPoints);
+    if (!canvasRefs.TMP.current) return;
+    const tmpCtx = canvasRefs.TMP.current.getContext('2d');
+    if (!tmpCtx) return;
+
+    let latestForce = 0.1;
+    const updateLatestForce = (x: number, y: number): number => {
+      const p = interpolatedPoints.find((p) => p.x === x && p.y === y);
+      if (p) latestForce = p.force;
+      return latestForce;
+    };
+
+    tmpCtx.lineCap = props.lineCap ?? CANVAS_CONTEXT_STYLE.lineCap;
+    tmpCtx.lineJoin = props.lineJoin ?? CANVAS_CONTEXT_STYLE.lineJoin;
+    tmpCtx.strokeStyle = props.strokeStyle ?? CANVAS_CONTEXT_STYLE.strokeStyle;
+
+    if (!ctxTranslated) {
+      tmpCtx.translate(CANVAS_TRANSLATE, CANVAS_TRANSLATE);
+      setCtxTranslated(true);
+    }
+
+    tmpCtx.beginPath();
+    tmpCtx.moveTo(points[0].x, points[0].y);
+
+    for (let i = 0; i < points.length; i++) {
+      const { x, y } = points[i];
+      if (props.usePressure) updateLatestForce(x, y);
+
+      // canvas styles
+      tmpCtx.lineWidth =
+        (props.lineWidth ?? CANVAS_CONTEXT_STYLE.lineWidth) *
+        (props.usePressure ? latestForce : 1);
+
+      tmpCtx.lineTo(x, y);
+    }
+
+    tmpCtx.stroke();
+  };
+
+  const drawDiffLine = () => {
     if (points.length === 0) return;
     if (!canvasRefs.TMP.current) return;
     const tmpCtx = canvasRefs.TMP.current.getContext('2d');
@@ -227,7 +279,7 @@ const DrawLine: React.ForwardRefRenderFunction<IDrawLineHandle, Props> = (
     const latestPoint = points[points.length - 1];
 
     if (!ctxTranslated) {
-      tmpCtx.translate(0.5, 0.5);
+      tmpCtx.translate(CANVAS_TRANSLATE, CANVAS_TRANSLATE);
       setCtxTranslated(true);
     }
 
@@ -250,9 +302,10 @@ const DrawLine: React.ForwardRefRenderFunction<IDrawLineHandle, Props> = (
   };
 
   const savePointsToLine = () => {
-    lines.push([...points]);
+    lines.push([...interpolatedPoints]);
     setLines([...lines]);
     setPoints([]);
+    setInterpolatedPoints([]);
   };
 
   const transcribeTmpToDrawingHistory = () => {
@@ -276,7 +329,12 @@ const DrawLine: React.ForwardRefRenderFunction<IDrawLineHandle, Props> = (
       if (!canvasRefs[k].current) return;
       const ctx = canvasRefs[k].current?.getContext('2d');
       if (!ctx) return;
-      ctx.clearRect(-0.5, -0.5, props.canvasWidth, props.canvasHeight);
+      ctx.clearRect(
+        CANVAS_TRANSLATE * -1,
+        CANVAS_TRANSLATE * -1,
+        props.canvasWidth,
+        props.canvasHeight
+      );
     });
   };
 

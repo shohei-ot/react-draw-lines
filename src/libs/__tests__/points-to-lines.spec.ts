@@ -1,4 +1,4 @@
-import { Line, Point } from '../..';
+import { Line, Point } from '../../interface';
 import { pointsToLines } from '../points-to-lines';
 
 describe('points to lines', () => {

@@ -93,7 +93,7 @@ Base.args = {
   canvasHeight: 400,
   backgroundColor: '#ddd',
   usePressure: true,
-  lineWidth: 10,
+  lineWidth: 5,
   minLineWidth: 1,
   strokeStyle: '#000',
   lineCap: 'round',

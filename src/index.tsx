@@ -94,10 +94,28 @@ const DrawLine: React.ForwardRefRenderFunction<IDrawLineHandle, Props> = (
   const [startPoint, setStartPoint] = useState<Point | null>(null);
 
   // 引いている線を表現する整形済みポイントの配列
-  const [points, setPoints] = useState<Point[]>([]);
+  // const [points, setPoints] = useState<Point[]>([]);
+  let points: Point[] = [];
+  const setPoints = (argPoints: Point[]) => {
+    points = argPoints;
+  };
 
   // 補間済みのポイントの配列
-  // const [organizedPoints, setOrganizedPoints] = useState<Point[]>([]);
+  const [organizedPoints, setOrganizedPoints] = useState<Point[]>([]);
+
+  // useEffect(() => {
+  //   if (organizedPoints.length > 0) {
+  //     // organized-points の描画
+  //     drawOrganizedLine(organizedPoints);
+  //     // drawing-history への転写
+  //     transcribeOrganizedLineToDrawingHistory();
+  //     clearCanvas(['ORGANIZED_LINE']);
+  //     // onChange の emit
+  //     handleOnChange();
+  //     // organized-points のクリア
+  //     setOrganizedPoints([]);
+  //   }
+  // }, [organizedPoints]);
 
   const setCanvasBackgroundImg = (imgEl: HTMLImageElement) => {
     const bgCanvasEl = canvasRefs.DRAWING_HISTORY.current;
@@ -182,18 +200,29 @@ const DrawLine: React.ForwardRefRenderFunction<IDrawLineHandle, Props> = (
     addPoint(getPoint(e.nativeEvent, startPoint.identifier));
     drawPoints(points);
     // curveInterpolation();
-    const organizedPoints = genOrganizePoints(points);
-    drawOrganizedLine(organizedPoints);
+    // FIXME: points を state で管理しない方がいいかもしれない。実行と完了のタイミングが非同期なので、 genOrganizePoints の戻りがおかしくなるっぽい。
+    setOrganizedPoints(genOrganizePoints(points));
+    // drawOrganizedLine(organizedPoints);
+    new Promise(() => {
+      drawOrganizedLine(organizedPoints);
+      // drawing-history への転写
+      transcribeOrganizedLineToDrawingHistory();
+      clearCanvas(['ORGANIZED_LINE']);
+      // onChange の emit
+      handleOnChange();
+      // organized-points のクリア
+      setOrganizedPoints([]);
+    });
     clearPoints();
     clearCanvas(['TMP']);
     // savePointsToLine();
-    transcribeOrganizedLineToDrawingHistory();
-    clearCanvas(['ORGANIZED_LINE']);
+    // transcribeOrganizedLineToDrawingHistory();
+    // clearCanvas(['ORGANIZED_LINE']);
 
     setDrawingStarted(false);
     // setPointerHasMoved(true);
 
-    handleOnChange();
+    // handleOnChange();
     setStartPoint(null);
     // console.debug('> END handleDrawEnd');
   };

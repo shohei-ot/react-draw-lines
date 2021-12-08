@@ -46,6 +46,7 @@ const CANVAS_TRANSLATE = 0.5;
 
 const CANVAS_LAYER: MappedConst<CanvasLayerName> = {
   DRAWING_HISTORY: 'DRAWING_HISTORY',
+  ORGANIZED_LINE: 'ORGANIZED_LINE',
   TMP: 'TMP',
   USER_INTERFACE: 'USER_INTERFACE',
 };
@@ -71,11 +72,14 @@ const DrawLine: React.ForwardRefRenderFunction<IDrawLineHandle, Props> = (
 
   const canvasRefs: CanvasLayerRefs = {
     DRAWING_HISTORY: useRef<HTMLCanvasElement | null>(null),
+    ORGANIZED_LINE: useRef<HTMLCanvasElement | null>(null),
     TMP: useRef<HTMLCanvasElement | null>(null),
     USER_INTERFACE: useRef<HTMLCanvasElement | null>(null),
   };
 
-  const [ctxTranslated, setCtxTranslated] = useState(false);
+  const [tmpCtxTranslated, setTmpCtxTranslated] = useState(false);
+  const [tmpOrganizedLineCtxTranslated, setOrganizedLineCtxTranslated] =
+    useState(false);
 
   // ポインターが移動した事を示すフラグ
   // const [pointerHasMoved, setPointerHasMoved] = useState(false);
@@ -84,7 +88,7 @@ const DrawLine: React.ForwardRefRenderFunction<IDrawLineHandle, Props> = (
   const [drawingStarted, setDrawingStarted] = useState(false);
 
   // 引かれた線
-  const [lines, setLines] = useState<Point[][]>([]);
+  // const [lines, setLines] = useState<Point[][]>([]);
 
   // mouseDown, touchStart の point
   const [startPoint, setStartPoint] = useState<Point | null>(null);
@@ -93,7 +97,7 @@ const DrawLine: React.ForwardRefRenderFunction<IDrawLineHandle, Props> = (
   const [points, setPoints] = useState<Point[]>([]);
 
   // 補間済みのポイントの配列
-  const [interpolatedPoints, setInterpolatedPoints] = useState<Point[]>([]);
+  // const [organizedPoints, setOrganizedPoints] = useState<Point[]>([]);
 
   const setCanvasBackgroundImg = (imgEl: HTMLImageElement) => {
     const bgCanvasEl = canvasRefs.DRAWING_HISTORY.current;
@@ -119,7 +123,7 @@ const DrawLine: React.ForwardRefRenderFunction<IDrawLineHandle, Props> = (
   // 全消し機能www
   const eraseAllCanvas = () => {
     setPoints([]);
-    setLines([]);
+    // setLines([]);
     layerNames.forEach((k) => {
       const canvasEl = canvasRefs[k].current;
       if (!canvasEl) return;
@@ -141,7 +145,7 @@ const DrawLine: React.ForwardRefRenderFunction<IDrawLineHandle, Props> = (
 
     // addPoint(getPoint(e.nativeEvent));
     setStartPoint(getPoint(e.nativeEvent));
-    drawPoints();
+    drawPoints(points);
 
     // setPointerHasMoved(true);
     // console.debug('> END handleDrawStart');
@@ -158,7 +162,7 @@ const DrawLine: React.ForwardRefRenderFunction<IDrawLineHandle, Props> = (
     }
 
     addPoint(getPoint(e.nativeEvent, startPoint.identifier));
-    drawPoints();
+    drawPoints(points);
 
     // setPointerHasMoved(true);
     // console.debug('> END handleDrawMove');
@@ -176,10 +180,15 @@ const DrawLine: React.ForwardRefRenderFunction<IDrawLineHandle, Props> = (
     }
 
     addPoint(getPoint(e.nativeEvent, startPoint.identifier));
-    drawPoints();
-    savePointsToLine();
-    transcribeTmpToDrawingHistory();
+    drawPoints(points);
+    // curveInterpolation();
+    const organizedPoints = genOrganizePoints(points);
+    drawOrganizedLine(organizedPoints);
+    clearPoints();
     clearCanvas(['TMP']);
+    // savePointsToLine();
+    transcribeOrganizedLineToDrawingHistory();
+    clearCanvas(['ORGANIZED_LINE']);
 
     setDrawingStarted(false);
     // setPointerHasMoved(true);
@@ -187,6 +196,13 @@ const DrawLine: React.ForwardRefRenderFunction<IDrawLineHandle, Props> = (
     handleOnChange();
     setStartPoint(null);
     // console.debug('> END handleDrawEnd');
+  };
+
+  const genOrganizePoints = (points: Point[]): Point[] => {
+    return lineOrganizer(points);
+  };
+  const clearPoints = () => {
+    setPoints([]);
   };
 
   const handleOnChange = () => {
@@ -199,7 +215,7 @@ const DrawLine: React.ForwardRefRenderFunction<IDrawLineHandle, Props> = (
     props.onChange({ imgUrl });
   };
 
-  const addPoint = (point: Point) => {
+  const addPoint = (point: Point): Point[] => {
     // console.debug('> START addPoint');
     // console.debug('point', { ...point });
     if (points.length === 0) {
@@ -208,59 +224,112 @@ const DrawLine: React.ForwardRefRenderFunction<IDrawLineHandle, Props> = (
     } else {
       points.push(point);
 
-      const organizedPoints = lineOrganizer(points);
+      // const organizedPoints = lineOrganizer(points);
       // points.push(...organizedPoints);
 
       setPoints([...points]);
-      setInterpolatedPoints([...organizedPoints]);
+      // setInterpolatedPoints([...organizedPoints]);
     }
     // console.debug('> END addPoint');
+    return points;
   };
 
-  const drawPoints = () => {
+  const drawPoints = (points: Point[]) => {
     // drawDiffLine();
-    drawAllPoints();
+    drawAllPoints(points);
   };
 
-  const drawAllPoints = async () => {
-    if (interpolatedPoints.length === 0) return;
+  const getCanvasStyles = (): CanvasDrawingStyle => ({
+    lineCap: props.lineCap ?? CANVAS_CONTEXT_STYLE.lineCap,
+    lineJoin: props.lineJoin ?? CANVAS_CONTEXT_STYLE.lineJoin,
+    strokeStyle: props.strokeStyle ?? CANVAS_CONTEXT_STYLE.strokeStyle,
+    lineWidth: props.lineWidth ?? CANVAS_CONTEXT_STYLE.lineWidth,
+    minLineWidth: props.minLineWidth ?? CANVAS_CONTEXT_STYLE.minLineWidth,
+  });
+
+  const drawAllPoints = async (points: Point[]) => {
+    if (points.length === 0) return;
     // console.debug('interpolatedPoints', interpolatedPoints);
     if (!canvasRefs.TMP.current) return;
     const tmpCtx = canvasRefs.TMP.current.getContext('2d');
     if (!tmpCtx) return;
 
-    let latestForce = 0.1;
-    const updateLatestForce = (x: number, y: number): number => {
-      const p = interpolatedPoints.find((p) => p.x === x && p.y === y);
-      if (p) latestForce = p.force;
-      return latestForce;
-    };
+    console.debug('drawAllPoints', points);
 
-    tmpCtx.lineCap = props.lineCap ?? CANVAS_CONTEXT_STYLE.lineCap;
-    tmpCtx.lineJoin = props.lineJoin ?? CANVAS_CONTEXT_STYLE.lineJoin;
-    tmpCtx.strokeStyle = props.strokeStyle ?? CANVAS_CONTEXT_STYLE.strokeStyle;
+    // let latestForce = 0.1;
+    // const updateLatestForce = (x: number, y: number): number => {
+    //   const p = points.find((p) => p.x === x && p.y === y);
+    //   if (p) latestForce = p.force;
+    //   return latestForce;
+    // };
 
-    if (!ctxTranslated) {
+    const {
+      lineCap,
+      lineJoin,
+      strokeStyle,
+      lineWidth: baseLineWidth,
+      minLineWidth,
+    } = getCanvasStyles();
+
+    tmpCtx.lineCap = lineCap;
+    tmpCtx.lineJoin = lineJoin;
+    tmpCtx.strokeStyle = strokeStyle;
+
+    if (!tmpCtxTranslated) {
       tmpCtx.translate(CANVAS_TRANSLATE, CANVAS_TRANSLATE);
-      setCtxTranslated(true);
+      setTmpCtxTranslated(true);
     }
 
     tmpCtx.beginPath();
     tmpCtx.moveTo(points[0].x, points[0].y);
 
     for (let i = 0; i < points.length; i++) {
-      const { x, y } = points[i];
-      if (props.usePressure) updateLatestForce(x, y);
-
-      // canvas styles
-      tmpCtx.lineWidth =
-        (props.lineWidth ?? CANVAS_CONTEXT_STYLE.lineWidth) *
-        (props.usePressure ? latestForce : 1);
-
+      const { x, y, force } = points[i];
+      const lineWidth = baseLineWidth * (props.usePressure ? force || 1 : 1);
+      tmpCtx.lineWidth = lineWidth > minLineWidth ? lineWidth : minLineWidth;
       tmpCtx.lineTo(x, y);
     }
 
     tmpCtx.stroke();
+  };
+
+  // organized-line を ORGANIZED_LINE に描写する
+  const drawOrganizedLine = (points: Point[]) => {
+    const canvasEl = canvasRefs.ORGANIZED_LINE.current;
+    if (!canvasEl) return;
+    const ctx = canvasEl.getContext('2d');
+    if (!ctx) return;
+
+    console.debug('drawOrganizedLine', points);
+
+    const {
+      lineCap,
+      lineJoin,
+      strokeStyle,
+      lineWidth: baseLineWidth,
+      minLineWidth,
+    } = getCanvasStyles();
+
+    ctx.lineCap = lineCap;
+    ctx.lineJoin = lineJoin;
+    ctx.strokeStyle = strokeStyle;
+
+    if (!tmpOrganizedLineCtxTranslated) {
+      ctx.translate(CANVAS_TRANSLATE, CANVAS_TRANSLATE);
+      setOrganizedLineCtxTranslated(true);
+    }
+
+    ctx.beginPath();
+    ctx.moveTo(points[0].x, points[0].y);
+
+    for (let i = 0; i < points.length; i++) {
+      const { x, y, force } = points[i];
+      const lineWidth = baseLineWidth * (props.usePressure ? force || 1 : 1);
+      ctx.lineWidth = lineWidth > minLineWidth ? lineWidth : minLineWidth;
+      ctx.lineTo(x, y);
+    }
+
+    ctx.stroke();
   };
 
   // const drawDiffLine = () => {
@@ -297,17 +366,21 @@ const DrawLine: React.ForwardRefRenderFunction<IDrawLineHandle, Props> = (
   //   tmpCtx.stroke();
   // };
 
-  const savePointsToLine = () => {
-    lines.push([...interpolatedPoints]);
-    setLines([...lines]);
-    setPoints([]);
-    setInterpolatedPoints([]);
-  };
+  // const savePointsToLine = () => {
+  //   lines.push([...organizedPoints]);
+  //   setLines([...lines]);
+  //   setPoints([]);
+  //   setOrganizedPoints([]);
+  // };
 
-  const transcribeTmpToDrawingHistory = () => {
-    if (!canvasRefs.DRAWING_HISTORY.current || !canvasRefs.TMP.current) return;
+  const transcribeOrganizedLineToDrawingHistory = () => {
+    if (
+      !canvasRefs.DRAWING_HISTORY.current ||
+      !canvasRefs.ORGANIZED_LINE.current
+    )
+      return;
 
-    const tmpCtx = canvasRefs.TMP.current.getContext('2d');
+    const tmpCtx = canvasRefs.ORGANIZED_LINE.current.getContext('2d');
     const historyCtx = canvasRefs.DRAWING_HISTORY.current.getContext('2d');
     if (!historyCtx || !tmpCtx) return;
 

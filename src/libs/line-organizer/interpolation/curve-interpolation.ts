@@ -104,6 +104,13 @@ const getNearestCoordIndex = (
   target: Coordinate,
   startIndexOfCoords: number
 ): Index => {
+  const funcName = 'getNearestCoordIndex';
+  if (coords.length < 2) throw new Error('coords.length が 2 未満');
+  console.log(`> ${funcName}`, {
+    coords,
+    target,
+    startIndexOfCoords,
+  });
   // console.group('getNearestCoordIndex');
   // point に対して最短のユークリッド距離を出せる座標の配列 index を返す
   let nearestDistance: number | null = null;

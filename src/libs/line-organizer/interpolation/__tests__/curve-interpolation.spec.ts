@@ -1,7 +1,8 @@
 import { Point } from '../../../../interface';
 import {
   Coordinate,
-  getBetweenCoordsForTest,
+  getCoordsBetweenForTest,
+  getNearestCoordIndexForTest,
   pressureInterpolationForTest,
 } from '../curve-interpolation';
 
@@ -61,7 +62,124 @@ describe('curve-interpolation', () => {
     }
   });
 
-  test('getBetweenCoords', () => {
+  describe('getNearestCoordIndex', () => {
+    const coords: Coordinate[] = [
+      [0, 0],
+      [100, 100],
+      [10, 10],
+      [20, 20],
+      [30, 30],
+      [40, 40],
+      [50, 50],
+      [60, 60],
+      [70, 70],
+      [80, 80],
+      [90, 90],
+      [100, 100],
+      [110, 110],
+      [120, 120],
+      [130, 130],
+      [140, 140],
+      [130, 130],
+      [120, 120],
+      [110, 110],
+      [100, 100],
+      [130, 130],
+      [120, 120],
+    ];
+
+    test('#1: 0,0 index=0', () => {
+      const target: Coordinate = [0, 0];
+      const startIndexOfCoords = 0;
+
+      const expected = 0;
+
+      const res = getNearestCoordIndexForTest(
+        coords,
+        target,
+        startIndexOfCoords
+      );
+
+      expect(res).toEqual(expected);
+    });
+
+    test('#2: 100,100 index=0', () => {
+      const target: Coordinate = [100, 100];
+      const startIndexOfCoords = 0;
+
+      const expected = 1;
+
+      const res = getNearestCoordIndexForTest(
+        coords,
+        target,
+        startIndexOfCoords
+      );
+
+      expect(res).toEqual(expected);
+    });
+
+    test('#3: 100,100 index=1', () => {
+      const target: Coordinate = [100, 100];
+      const startIndexOfCoords = 1;
+
+      const expected = 1;
+
+      const res = getNearestCoordIndexForTest(
+        coords,
+        target,
+        startIndexOfCoords
+      );
+
+      expect(res).toEqual(expected);
+    });
+
+    test('#4: 100,100 index=2', () => {
+      const target: Coordinate = [100, 100];
+      const startIndexOfCoords = 2;
+
+      const expected = 11;
+
+      const res = getNearestCoordIndexForTest(
+        coords,
+        target,
+        startIndexOfCoords
+      );
+
+      expect(res).toEqual(expected);
+    });
+
+    test('#5: 100,100 index=11', () => {
+      const target: Coordinate = [100, 100];
+      const startIndexOfCoords = 11;
+
+      const expected = 11;
+
+      const res = getNearestCoordIndexForTest(
+        coords,
+        target,
+        startIndexOfCoords
+      );
+
+      expect(res).toEqual(expected);
+    });
+
+    test('#6: 100,100 index=12', () => {
+      const target: Coordinate = [100, 100];
+      const startIndexOfCoords = 12;
+
+      const expected = 19;
+
+      const res = getNearestCoordIndexForTest(
+        coords,
+        target,
+        startIndexOfCoords
+      );
+
+      expect(res).toEqual(expected);
+    });
+  });
+
+  describe('getBetweenCoords', () => {
     // 検索元 coordinates
     const coords: Coordinate[] = [
       [0, 0],
@@ -88,106 +206,110 @@ describe('curve-interpolation', () => {
       [120, 120],
     ];
 
-    /**
-     * #1
-     */
-    const start1: Coordinate = [10, 10];
-    const end1: Coordinate = [100, 100];
-    const startIndexOfCoords1 = 0;
+    test('#1', () => {
+      /**
+       * #1
+       */
+      const start: Coordinate = [10, 10];
+      const end: Coordinate = [100, 100];
+      const startIndexOfCoords = 0;
 
-    const res1 = getBetweenCoordsForTest(
-      coords,
-      start1,
-      end1,
-      startIndexOfCoords1
-    );
-    const [res1Coords, res1EndIndex] = res1;
+      const res = getCoordsBetweenForTest(
+        coords,
+        start,
+        end,
+        startIndexOfCoords
+      );
+      const [resCoords, resEndIndex] = res;
 
-    const expected1: [Coordinate[], number] = [
-      [
-        [20, 20],
-        [30, 30],
-        [40, 40],
-        [50, 50],
-        [60, 60],
-        [70, 70],
-        [80, 80],
-        [90, 90],
-      ],
-      11,
-    ];
-    const expected1Coords = expected1[0];
-    const expected1EndIndex = expected1[1];
+      const expected: [Coordinate[], number] = [
+        [
+          [20, 20],
+          [30, 30],
+          [40, 40],
+          [50, 50],
+          [60, 60],
+          [70, 70],
+          [80, 80],
+          [90, 90],
+        ],
+        11,
+      ];
+      const expectedCoords = expected[0];
+      const expectedEndIndex = expected[1];
 
-    console.debug('expected1', expected1);
-    console.debug('res1', res1);
+      console.debug('expected', expected);
+      console.debug('res', res);
 
-    // 検証
+      // 検証
 
-    // end index
-    expect(res1EndIndex).toEqual(expected1EndIndex);
+      // end index
+      expect(resEndIndex).toEqual(expectedEndIndex);
 
-    // coords number
-    expect(res1Coords.length).toEqual(expected1Coords.length);
+      // coords number
+      expect(resCoords.length).toEqual(expectedCoords.length);
 
-    for (let i = 0; i < res1Coords.length; i++) {
-      const resCoord = res1Coords[i];
-      const [x, y] = resCoord;
-      const expCoord = expected1Coords[i];
-      const [expcX, expcY] = expCoord;
-      expect(x).toEqual(expcX);
-      expect(y).toEqual(expcY);
-    }
+      for (let i = 0; i < resCoords.length; i++) {
+        const resCoord = resCoords[i];
+        const [x, y] = resCoord;
+        const expCoord = expectedCoords[i];
+        const [expcX, expcY] = expCoord;
+        expect(x).toEqual(expcX);
+        expect(y).toEqual(expcY);
+      }
+    });
 
-    /**
-     * #2
-     */
+    test('#2', () => {
+      /**
+       * #2
+       */
 
-    const start2: Coordinate = [100, 100];
-    const end2: Coordinate = [100, 100];
-    const startIndexOfCoords2 = 2;
+      const start: Coordinate = [100, 100];
+      const end: Coordinate = [100, 100];
+      const startIndexOfCoords = 2;
 
-    const res2 = getBetweenCoordsForTest(
-      coords,
-      start2,
-      end2,
-      startIndexOfCoords2
-    );
-    const [res2Coords, res2EndIndex] = res2;
+      const res = getCoordsBetweenForTest(
+        coords,
+        start,
+        end,
+        startIndexOfCoords
+      );
+      const [resCoords, resEndIndex] = res;
 
-    const expected2: [Coordinate[], number] = [
-      [
-        [110, 110],
-        [120, 120],
-        [130, 130],
-        [140, 140],
-        [130, 130],
-        [120, 120],
-        [110, 110],
-      ],
-      19,
-    ];
-    const expected2Coords = expected2[0];
-    const expected2EndIndex = expected2[1];
+      const expected: [Coordinate[], number] = [
+        [
+          [110, 110],
+          [120, 120],
+          [130, 130],
+          [140, 140],
+          [130, 130],
+          [120, 120],
+          [110, 110],
+        ],
+        19,
+      ];
+      const expectedCoords = expected[0];
+      const expectedEndIndex = expected[1];
 
-    console.debug('expected2', expected2);
-    console.debug('res2', res2);
+      console.debug('expected', expected);
+      console.debug('res', res);
 
-    // 検証
+      // 検証
 
-    // end index
-    expect(res2EndIndex).toEqual(expected2EndIndex);
+      // end index
+      expect(resEndIndex).toEqual(expectedEndIndex);
 
-    // coords number
-    expect(res2Coords.length).toEqual(expected2Coords.length);
+      // coords number
+      expect(resCoords.length).toEqual(expectedCoords.length);
 
-    for (let i = 0; i < res2Coords.length; i++) {
-      const resCoord = res2Coords[i];
-      const [x, y] = resCoord;
-      const expCoord = expected2Coords[i];
-      const [expcX, expcY] = expCoord;
-      expect(x).toEqual(expcX);
-      expect(y).toEqual(expcY);
-    }
+      for (let i = 0; i < resCoords.length; i++) {
+        const resCoord = resCoords[i];
+        const [x, y] = resCoord;
+        const expCoord = expectedCoords[i];
+        const [expcX, expcY] = expCoord;
+        expect(x).toEqual(expcX);
+        expect(y).toEqual(expcY);
+      }
+    });
   });
 });

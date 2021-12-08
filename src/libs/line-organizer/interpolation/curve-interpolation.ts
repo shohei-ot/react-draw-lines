@@ -13,7 +13,7 @@ export const curveInterpolation = (points: Point[]): Point[] => {
     flatPoints.push([x, y]);
   }
 
-  const interpolator = new CurveInterpolator(flatPoints);
+  const interpolator = new CurveInterpolator(flatPoints, { tension: 0.2 });
   const curvedPoints: Coordinate[] = interpolator.getPoints();
 
   const pressureRestoredPoints = restorePressuresToCurvedPoints(
@@ -25,27 +25,25 @@ export const curveInterpolation = (points: Point[]): Point[] => {
   return pressureRestoredPoints;
 };
 
-// TODO: curve interpolation された points に筆圧を持たせる
+// curve interpolation された points に筆圧を持たせる
 const restorePressuresToCurvedPoints = (
   origPoints: Point[],
   curvedCors: Coordinate[]
 ): Point[] => {
-  // TODO: origPoints の連続した 2 つの Point を start, end として, curvedCors からその 2 点の index を取り, 2 点間の Coordinate を抽出する.
+  // origPoints の連続した 2 つの Point を start, end として, curvedCors からその 2 点の index を取り, 2 点間の Coordinate を抽出する.
   const pressureRestoredPoints: Point[] = [];
 
   let searchIndex = 0;
   for (let i = 0; i < origPoints.length; i++) {
     if (i === 0) continue;
-    // FIXME: endPoint になるはずの currentPoint が単純に next point になってしまっている
 
     const prevPoint = origPoints[i - 1];
     const currentPoint = origPoints[i];
 
     // console.debug({ origPoints, curvedCors, prevPoint, currentPoint });
 
-    // FIXME: start は一致するけど end が数学的に一致できない
-    // TODO: end に一番近い座標を curvedCors から取得したい. 開始位置を指定して一番最初に見つかった座標を end と同一とみなす.
-    const [betweenCoords, endIndex] = getBetweenCoords(
+    // end に一番近い座標を curvedCors から取得したい. 開始位置を指定して一番最初に見つかった座標を end と同一とみなす.
+    const [betweenCoords, endIndex] = getCoordsBetween(
       curvedCors,
       [prevPoint.x, prevPoint.y],
       [currentPoint.x, currentPoint.y],
@@ -107,14 +105,14 @@ const getNearestCoordIndex = (
   startIndexOfCoords: number
 ): Index => {
   // console.group('getNearestCoordIndex');
-  // TODO: point に対して最短のユークリッド距離を出せる座標の配列 index を返す
+  // point に対して最短のユークリッド距離を出せる座標の配列 index を返す
   let nearestDistance: number | null = null;
   let nearestPointIndex: number | null = null;
   // let nearestCoordinate: null | [number, number] = null;
 
   const [targetX, targetY] = target;
-  for (let i = 0; i < coords.length; i++) {
-    if (startIndexOfCoords > i) continue;
+  for (let i = startIndexOfCoords; i < coords.length; i++) {
+    // if (startIndexOfCoords > i) continue;
 
     const [x, y] = coords[i];
 
@@ -123,12 +121,28 @@ const getNearestCoordIndex = (
       break;
     }
 
-    const distance = Math.sqrt(targetX * x + targetY * y);
+    // const currentDistance = Math.sqrt(targetX * x + targetY * y);
+    const currentDistance = Math.sqrt(
+      Math.abs(targetX - x) ** 2 + Math.abs(targetY - y) ** 2
+    );
 
-    // console.debug({ distance, coord: [x, y], target: [targetX, targetY] });
+    const updateNearestDistance =
+      nearestDistance === null ? true : nearestDistance > currentDistance;
 
-    if (nearestDistance === null || nearestDistance > distance) {
-      nearestDistance = distance;
+    console.debug({
+      src: {
+        coord: [x, y],
+        target: [targetX, targetY],
+      },
+      res: {
+        nearestDistance,
+        currentDistance,
+        updateNearestDistance,
+      },
+    });
+
+    if (updateNearestDistance) {
+      nearestDistance = currentDistance;
       nearestPointIndex = i;
       // nearestCoordinate = [x, y];
     }
@@ -144,16 +158,21 @@ const getNearestCoordIndex = (
   return nearestPointIndex;
 };
 
+export const getNearestCoordIndexForTest = getNearestCoordIndex;
+
 /**
  * start と end の間にある座標の配列と, 見つかった end の index を返す. 戻り値に start と end は含まない.
  */
-const getBetweenCoords = (
+const getCoordsBetween = (
   coords: Coordinate[],
   start: Coordinate,
   end: Coordinate,
-  startIndexOfCoords: number
+  startIndexOfCoords = 0
 ): [Coordinate[], number] => {
+  const funcName = 'getBetweenCoords';
   if (coords.length < 2) throw new Error('coords は 2 つ以上でないといけない');
+  console.group(funcName);
+
   // console.debug({ coords, start, end, startIndexOfCoords });
 
   // console.group('startIndex');
@@ -161,8 +180,16 @@ const getBetweenCoords = (
   // console.groupEnd();
 
   // console.group('endIndex');
-  const endIndex = getNearestCoordIndex(coords, end, startIndex);
+  const endIndex = getNearestCoordIndex(coords, end, startIndex + 1);
   // console.groupEnd();
+
+  console.debug(`> ${funcName}`, {
+    startIndexOfCoords,
+    start,
+    end,
+    startIndex,
+    endIndex,
+  });
 
   const tmp: Coordinate[] = [];
   for (let i = startIndex + 1; i < coords.length; i++) {
@@ -170,7 +197,8 @@ const getBetweenCoords = (
     else break;
   }
 
+  console.groupEnd();
   return [tmp, endIndex];
 };
 
-export const getBetweenCoordsForTest = getBetweenCoords;
+export const getCoordsBetweenForTest = getCoordsBetween;

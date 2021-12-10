@@ -107,7 +107,7 @@ const DrawLine: React.ForwardRefRenderFunction<IDrawLineHandle, Props> = (
   useEffect(() => {
     if (pointsForDrawing.length > 0) {
       // organized-points の描画
-      drawOrganizedLine(pointsForDrawing);
+      drawMoreBeautifulLine(pointsForDrawing);
       // drawing-history への転写
       transcriPointsForDrawingToHistory();
       clearCanvas(['ORGANIZED_LINE']);
@@ -314,7 +314,7 @@ const DrawLine: React.ForwardRefRenderFunction<IDrawLineHandle, Props> = (
   };
 
   // organized-line を ORGANIZED_LINE に描写する
-  const drawOrganizedLine = (points: Point[]) => {
+  const drawMoreBeautifulLine = (points: Point[]) => {
     const canvasEl = canvasRefs.ORGANIZED_LINE.current;
     if (!canvasEl) return;
     const ctx = canvasEl.getContext('2d');

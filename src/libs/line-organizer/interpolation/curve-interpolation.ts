@@ -111,22 +111,51 @@ const getNearestCoordIndex = (
   // let nearestCoordinate: null | [number, number] = null;
 
   const [targetX, targetY] = target;
-  for (let i = 0; i < coords.length; i++) {
-    if (startIndexOfCoords > i) continue;
+  for (let i = startIndexOfCoords; i < coords.length; i++) {
+    // if (startIndexOfCoords > i) continue;
 
     const [x, y] = coords[i];
 
     if (targetX === x && targetY === y) {
       nearestPointIndex = i;
+
+      console.debug('targetX === x && targetY === y', {
+        src: {
+          coord: [x, y],
+          target: [targetX, targetY],
+        },
+        res: {
+          nearestDistance,
+          // currentDistance,
+          // updateNearestDistance,
+        },
+      });
+
       break;
     }
 
-    const distance = Math.sqrt(targetX * x + targetY * y);
+    // const currentDistance = Math.sqrt(targetX * x + targetY * y);
+    const currentDistance = Math.sqrt(
+      Math.abs(targetX - x) ** 2 + Math.abs(targetY - y) ** 2
+    );
 
-    // console.debug({ distance, coord: [x, y], target: [targetX, targetY] });
+    const updateNearestDistance =
+      nearestDistance === null ? true : nearestDistance > currentDistance;
 
-    if (nearestDistance === null || nearestDistance > distance) {
-      nearestDistance = distance;
+    console.debug({
+      src: {
+        coord: [x, y],
+        target: [targetX, targetY],
+      },
+      res: {
+        nearestDistance,
+        currentDistance,
+        updateNearestDistance,
+      },
+    });
+
+    if (updateNearestDistance) {
+      nearestDistance = currentDistance;
       nearestPointIndex = i;
       // nearestCoordinate = [x, y];
     }
@@ -165,6 +194,7 @@ const getCoordsBetween = (
 
   // console.group('endIndex');
   const endIndex = getNearestCoordIndex(coords, end, startIndex);
+  // const endIndex = getNearestCoordIndex(coords, end, startIndex + 1);
   // console.groupEnd();
 
   console.debug(`> ${funcName}`, {

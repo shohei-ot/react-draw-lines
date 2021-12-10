@@ -125,6 +125,19 @@ const getNearestCoordIndex = (
 
     if (targetX === x && targetY === y) {
       nearestPointIndex = i;
+
+      console.debug('targetX === x && targetY === y', {
+        src: {
+          coord: [x, y],
+          target: [targetX, targetY],
+        },
+        res: {
+          nearestDistance,
+          // currentDistance,
+          // updateNearestDistance,
+        },
+      });
+
       break;
     }
 
@@ -187,7 +200,8 @@ const getCoordsBetween = (
   // console.groupEnd();
 
   // console.group('endIndex');
-  const endIndex = getNearestCoordIndex(coords, end, startIndex + 1);
+  const endIndex = getNearestCoordIndex(coords, end, startIndex);
+  // const endIndex = getNearestCoordIndex(coords, end, startIndex + 1);
   // console.groupEnd();
 
   console.debug(`> ${funcName}`, {

@@ -6,14 +6,18 @@
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "scripts": {
-    "build": "npm run clear-dist && tsc",
+    "build": "run-s build:*",
+    "build:prepare": "npm run lint && npm run clear-dist",
+    "build:prcess": "tsc",
+    "build:finish": "echo \"Build finish.\"",
     "test": "jest",
     "prepare": "husky install",
     "lint-staged": "lint-staged",
     "storybook": "start-storybook -p 6006",
     "build-storybook": "build-storybook",
     "ncu": "npm-check-updates",
-    "clear-dist": "rimraf ./dist/**/*"
+    "clear-dist": "rimraf ./dist/**/*",
+    "lint": "eslint --ext .ts,.tsx ./src/**/*"
   },
   "lint-staged": {
     "*.{ts,tsx}": [
@@ -60,6 +64,7 @@
     "jest": "^27.3.1",
     "lint-staged": "^11.2.6",
     "npm-check-updates": "^12.0.2",
+    "npm-run-all": "^4.1.5",
     "prettier": "^2.5.0",
     "rimraf": "^3.0.2",
     "ts-jest": "^27.0.7",

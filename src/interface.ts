@@ -28,4 +28,8 @@ export interface IDrawLineHandle {
   eraseAllCanvas(): void;
 }
 
-export type CanvasLayerName = 'DRAWING_HISTORY' | 'TMP' | 'USER_INTERFACE';
+export type CanvasLayerName =
+  | 'DRAWING_HISTORY'
+  | 'TMP'
+  | 'ORGANIZED_LINE'
+  | 'USER_INTERFACE';

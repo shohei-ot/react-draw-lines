@@ -14,7 +14,8 @@ import {
   MappedConst,
   Point,
 } from './interface';
-import { lineOrganizer } from './libs/line-organizer';
+// import { lineOrganizer } from './libs/line-organizer';
+import { lineRenderer, pointsRenderer } from './libs/canvas-renderer';
 
 export type Props = {
   id?: string;
@@ -101,21 +102,21 @@ const DrawLine: React.ForwardRefRenderFunction<IDrawLineHandle, Props> = (
   };
 
   // 補間済みのポイントの配列
-  const [organizedPoints, setOrganizedPoints] = useState<Point[]>([]);
+  const [pointsForDrawing, setPointsForDrawing] = useState<Point[]>([]);
 
-  // useEffect(() => {
-  //   if (organizedPoints.length > 0) {
-  //     // organized-points の描画
-  //     drawOrganizedLine(organizedPoints);
-  //     // drawing-history への転写
-  //     transcribeOrganizedLineToDrawingHistory();
-  //     clearCanvas(['ORGANIZED_LINE']);
-  //     // onChange の emit
-  //     handleOnChange();
-  //     // organized-points のクリア
-  //     setOrganizedPoints([]);
-  //   }
-  // }, [organizedPoints]);
+  useEffect(() => {
+    if (pointsForDrawing.length > 0) {
+      // organized-points の描画
+      drawOrganizedLine(pointsForDrawing);
+      // drawing-history への転写
+      transcriPointsForDrawingToHistory();
+      clearCanvas(['ORGANIZED_LINE']);
+      // onChange の emit
+      handleOnChange();
+      // organized-points のクリア
+      setPointsForDrawing([]);
+    }
+  }, [pointsForDrawing]);
 
   const setCanvasBackgroundImg = (imgEl: HTMLImageElement) => {
     const bgCanvasEl = canvasRefs.DRAWING_HISTORY.current;
@@ -201,21 +202,10 @@ const DrawLine: React.ForwardRefRenderFunction<IDrawLineHandle, Props> = (
     drawPoints(points);
     // curveInterpolation();
     // FIXME: points を state で管理しない方がいいかもしれない。実行と完了のタイミングが非同期なので、 genOrganizePoints の戻りがおかしくなるっぽい。
-    setOrganizedPoints(genOrganizePoints(points));
-    // drawOrganizedLine(organizedPoints);
-    new Promise(() => {
-      drawOrganizedLine(organizedPoints);
-      // drawing-history への転写
-      transcribeOrganizedLineToDrawingHistory();
-      clearCanvas(['ORGANIZED_LINE']);
-      // onChange の emit
-      handleOnChange();
-      // organized-points のクリア
-      setOrganizedPoints([]);
-    });
+    // setOrganizedPoints(genOrganizePoints(points));
+    setPointsForDrawing(points);
     clearPoints();
     clearCanvas(['TMP']);
-    // savePointsToLine();
     // transcribeOrganizedLineToDrawingHistory();
     // clearCanvas(['ORGANIZED_LINE']);
 
@@ -227,9 +217,9 @@ const DrawLine: React.ForwardRefRenderFunction<IDrawLineHandle, Props> = (
     // console.debug('> END handleDrawEnd');
   };
 
-  const genOrganizePoints = (points: Point[]): Point[] => {
-    return lineOrganizer(points);
-  };
+  // const genOrganizePoints = (points: Point[]): Point[] => {
+  //   return lineOrganizer(points);
+  // };
   const clearPoints = () => {
     setPoints([]);
   };
@@ -292,34 +282,35 @@ const DrawLine: React.ForwardRefRenderFunction<IDrawLineHandle, Props> = (
     //   return latestForce;
     // };
 
-    const {
-      lineCap,
-      lineJoin,
-      strokeStyle,
-      lineWidth: baseLineWidth,
-      minLineWidth,
-    } = getCanvasStyles();
+    // const {
+    //   lineCap,
+    //   lineJoin,
+    //   strokeStyle,
+    //   lineWidth: baseLineWidth,
+    //   minLineWidth,
+    // } = getCanvasStyles();
 
-    tmpCtx.lineCap = lineCap;
-    tmpCtx.lineJoin = lineJoin;
-    tmpCtx.strokeStyle = strokeStyle;
+    // tmpCtx.lineCap = lineCap;
+    // tmpCtx.lineJoin = lineJoin;
+    // tmpCtx.strokeStyle = strokeStyle;
 
     if (!tmpCtxTranslated) {
       tmpCtx.translate(CANVAS_TRANSLATE, CANVAS_TRANSLATE);
       setTmpCtxTranslated(true);
     }
 
-    tmpCtx.beginPath();
-    tmpCtx.moveTo(points[0].x, points[0].y);
+    pointsRenderer(tmpCtx, getCanvasStyles(), points, props.usePressure);
+    // tmpCtx.beginPath();
+    // tmpCtx.moveTo(points[0].x, points[0].y);
 
-    for (let i = 0; i < points.length; i++) {
-      const { x, y, force } = points[i];
-      const lineWidth = baseLineWidth * (props.usePressure ? force || 1 : 1);
-      tmpCtx.lineWidth = lineWidth > minLineWidth ? lineWidth : minLineWidth;
-      tmpCtx.lineTo(x, y);
-    }
+    // for (let i = 0; i < points.length; i++) {
+    //   const { x, y, force } = points[i];
+    //   const lineWidth = baseLineWidth * (props.usePressure ? force || 1 : 1);
+    //   tmpCtx.lineWidth = lineWidth > minLineWidth ? lineWidth : minLineWidth;
+    //   tmpCtx.lineTo(x, y);
+    // }
 
-    tmpCtx.stroke();
+    // tmpCtx.stroke();
   };
 
   // organized-line を ORGANIZED_LINE に描写する
@@ -329,80 +320,15 @@ const DrawLine: React.ForwardRefRenderFunction<IDrawLineHandle, Props> = (
     const ctx = canvasEl.getContext('2d');
     if (!ctx) return;
 
-    console.debug('drawOrganizedLine', points);
-
-    const {
-      lineCap,
-      lineJoin,
-      strokeStyle,
-      lineWidth: baseLineWidth,
-      minLineWidth,
-    } = getCanvasStyles();
-
-    ctx.lineCap = lineCap;
-    ctx.lineJoin = lineJoin;
-    ctx.strokeStyle = strokeStyle;
-
     if (!tmpOrganizedLineCtxTranslated) {
       ctx.translate(CANVAS_TRANSLATE, CANVAS_TRANSLATE);
       setOrganizedLineCtxTranslated(true);
     }
 
-    ctx.beginPath();
-    ctx.moveTo(points[0].x, points[0].y);
-
-    for (let i = 0; i < points.length; i++) {
-      const { x, y, force } = points[i];
-      const lineWidth = baseLineWidth * (props.usePressure ? force || 1 : 1);
-      ctx.lineWidth = lineWidth > minLineWidth ? lineWidth : minLineWidth;
-      ctx.lineTo(x, y);
-    }
-
-    ctx.stroke();
+    lineRenderer(ctx, getCanvasStyles(), points, props.usePressure);
   };
 
-  // const drawDiffLine = () => {
-  //   if (points.length === 0) return;
-  //   if (!canvasRefs.TMP.current) return;
-  //   const tmpCtx = canvasRefs.TMP.current.getContext('2d');
-  //   if (!tmpCtx) return;
-
-  //   const isFirstPoint = points.length === 1;
-
-  //   const prevPoint = isFirstPoint ? points[0] : points[points.length - 2];
-  //   const latestPoint = points[points.length - 1];
-
-  //   if (!ctxTranslated) {
-  //     tmpCtx.translate(CANVAS_TRANSLATE, CANVAS_TRANSLATE);
-  //     setCtxTranslated(true);
-  //   }
-
-  //   if (isFirstPoint) {
-  //     tmpCtx.beginPath();
-  //   }
-
-  //   // canvas styles
-  //   tmpCtx.lineWidth =
-  //     (props.lineWidth ?? CANVAS_CONTEXT_STYLE.lineWidth) *
-  //     (props.usePressure ? latestPoint.force : 1);
-  //   tmpCtx.lineCap = props.lineCap ?? CANVAS_CONTEXT_STYLE.lineCap;
-  //   tmpCtx.lineJoin = props.lineJoin ?? CANVAS_CONTEXT_STYLE.lineJoin;
-  //   tmpCtx.strokeStyle = props.strokeStyle ?? CANVAS_CONTEXT_STYLE.strokeStyle;
-
-  //   tmpCtx.moveTo(prevPoint.x, prevPoint.y);
-  //   tmpCtx.lineTo(latestPoint.x, latestPoint.y);
-
-  //   tmpCtx.stroke();
-  // };
-
-  // const savePointsToLine = () => {
-  //   lines.push([...organizedPoints]);
-  //   setLines([...lines]);
-  //   setPoints([]);
-  //   setOrganizedPoints([]);
-  // };
-
-  const transcribeOrganizedLineToDrawingHistory = () => {
+  const transcriPointsForDrawingToHistory = () => {
     if (
       !canvasRefs.DRAWING_HISTORY.current ||
       !canvasRefs.ORGANIZED_LINE.current

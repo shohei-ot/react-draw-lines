@@ -382,6 +382,8 @@ const DrawLine: React.ForwardRefRenderFunction<IDrawLineHandle, Props> = (
         height: `${props.canvasHeight}px`,
         touchAction: 'none',
         backgroundColor: props.backgroundColor,
+        userSelect: 'none',
+        WebkitUserSelect: 'none',
       }}
     >
       {layerNames.map((layerName) => {
@@ -391,7 +393,12 @@ const DrawLine: React.ForwardRefRenderFunction<IDrawLineHandle, Props> = (
           <canvas
             ref={casnvasRef}
             key={layerName}
-            style={{ display: 'block', position: 'absolute' }}
+            style={{
+              display: 'block',
+              position: 'absolute',
+              userSelect: 'none',
+              WebkitUserSelect: 'none',
+            }}
             width={props.canvasWidth}
             height={props.canvasHeight}
             onMouseDown={isInterface ? handleDrawStart : undefined}

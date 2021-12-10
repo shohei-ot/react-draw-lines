@@ -64,6 +64,7 @@ const drawCurvesFromManyPoints = (
   ctx.moveTo(points[0].x, points[0].y);
 
   for (let i = 0; i < points.length - 2; i++) {
+    ctx.save();
     const currentPoint = points[i];
     const { x: cX, y: cY, force } = currentPoint;
 
@@ -83,6 +84,13 @@ const drawCurvesFromManyPoints = (
     ctx.quadraticCurveTo(cX, cY, xc, yc);
   }
 
+  ctx.save();
+  ctx.lineWidth = genRealLineWidth(
+    styles.lineWidth,
+    styles.minLineWidth,
+    points[points.length - 2].force,
+    usePressure
+  );
   ctx.quadraticCurveTo(
     points[points.length - 2].x,
     points[points.length - 2].y,
@@ -104,6 +112,7 @@ const drawLineFromPoints = (
 
   for (let i = 0; i < points.length; i++) {
     const { x, y, force } = points[i];
+    ctx.save();
     ctx.lineWidth = genRealLineWidth(
       styles.lineWidth,
       styles.minLineWidth,

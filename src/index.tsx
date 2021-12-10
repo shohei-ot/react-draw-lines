@@ -25,7 +25,7 @@ export type Props = {
   onChange?: (out: { imgUrl: string }) => void;
 
   // canvas drawing options
-  usePressure?: boolean; // for touch control (default: fales)
+  usePressure?: boolean; // for touch control (default: fales) (NOTE: 2021-12-10 未対応)
   lineWidth?: number; // default: 10
   minLineWidth?: number; // default: 1
   strokeStyle?: string; // Stroke Color. (default: #000)

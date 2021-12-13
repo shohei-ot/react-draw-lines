@@ -17,6 +17,8 @@ import {
 // import { lineOrganizer } from './libs/line-organizer';
 import { lineRenderer, pointsRenderer } from './libs/canvas-renderer';
 
+const DEBUG = false;
+
 export type Props = {
   id?: string;
   canvasWidth: number;
@@ -86,13 +88,19 @@ const DrawLine: React.ForwardRefRenderFunction<IDrawLineHandle, Props> = (
   // const [pointerHasMoved, setPointerHasMoved] = useState(false);
 
   // 線を引いているフラグ
-  const [drawingStarted, setDrawingStarted] = useState(false);
+  let drawingStarted = false;
+  const setDrawingStarted = (status: boolean) => {
+    drawingStarted = status;
+  };
 
   // 引かれた線
   // const [lines, setLines] = useState<Point[][]>([]);
 
   // mouseDown, touchStart の point
-  const [startPoint, setStartPoint] = useState<Point | null>(null);
+  let startPoint: Point | null = null;
+  const setStartPoint = (p: Point | null) => {
+    startPoint = p;
+  };
 
   // 引いている線を表現する整形済みポイントの配列
   // const [points, setPoints] = useState<Point[]>([]);
@@ -139,7 +147,7 @@ const DrawLine: React.ForwardRefRenderFunction<IDrawLineHandle, Props> = (
     }
   }, [props.canvasBackgroundImg]);
 
-  // 全消し機能www
+  // 全消し機能
   const eraseAllCanvas = () => {
     setPoints([]);
     // setLines([]);
@@ -160,6 +168,8 @@ const DrawLine: React.ForwardRefRenderFunction<IDrawLineHandle, Props> = (
       return;
     }
 
+    DEBUG && console.group('handleDrawStart');
+
     setDrawingStarted(true);
 
     // addPoint(getPoint(e.nativeEvent));
@@ -168,6 +178,7 @@ const DrawLine: React.ForwardRefRenderFunction<IDrawLineHandle, Props> = (
 
     // setPointerHasMoved(true);
     // console.debug('> END handleDrawStart');
+    DEBUG && console.groupEnd();
   };
 
   const handleDrawMove = (e: DrawEvent) => {
@@ -175,8 +186,10 @@ const DrawLine: React.ForwardRefRenderFunction<IDrawLineHandle, Props> = (
       return;
     }
     // console.debug('> START handleDrawMove');
+    DEBUG && console.group('handleDrawMove');
 
     if (!startPoint) {
+      DEBUG && console.groupEnd();
       throw new Error('startPoint が null');
     }
 
@@ -185,16 +198,19 @@ const DrawLine: React.ForwardRefRenderFunction<IDrawLineHandle, Props> = (
 
     // setPointerHasMoved(true);
     // console.debug('> END handleDrawMove');
+    DEBUG && console.groupEnd();
   };
 
   const handleDrawEnd = (e: DrawEvent) => {
-    // console.debug('> START handleDrawEnd');
     if (!drawingStarted) {
       // console.debug('> ABORT handleDrawEnd');
       return;
     }
 
+    DEBUG && console.group('handleDrawEnd');
+
     if (!startPoint) {
+      DEBUG && console.groupEnd();
       throw new Error('startPoint が null');
     }
 
@@ -215,6 +231,7 @@ const DrawLine: React.ForwardRefRenderFunction<IDrawLineHandle, Props> = (
     // handleOnChange();
     setStartPoint(null);
     // console.debug('> END handleDrawEnd');
+    DEBUG && console.groupEnd();
   };
 
   // const genOrganizePoints = (points: Point[]): Point[] => {
@@ -235,6 +252,8 @@ const DrawLine: React.ForwardRefRenderFunction<IDrawLineHandle, Props> = (
   };
 
   const addPoint = (point: Point): Point[] => {
+    DEBUG && console.group('addPoint');
+    DEBUG && console.log({ ...point });
     // console.debug('> START addPoint');
     // console.debug('point', { ...point });
     if (points.length === 0) {
@@ -250,6 +269,8 @@ const DrawLine: React.ForwardRefRenderFunction<IDrawLineHandle, Props> = (
       // setInterpolatedPoints([...organizedPoints]);
     }
     // console.debug('> END addPoint');
+    DEBUG && console.log([...points]);
+    DEBUG && console.groupEnd();
     return points;
   };
 
@@ -273,7 +294,7 @@ const DrawLine: React.ForwardRefRenderFunction<IDrawLineHandle, Props> = (
     const tmpCtx = canvasRefs.TMP.current.getContext('2d');
     if (!tmpCtx) return;
 
-    console.debug('drawAllPoints', points);
+    DEBUG && console.debug('drawAllPoints', points);
 
     // let latestForce = 0.1;
     // const updateLatestForce = (x: number, y: number): number => {

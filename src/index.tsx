@@ -45,7 +45,7 @@ const CANVAS_CONTEXT_STYLE: CanvasDrawingStyle = {
 };
 
 // const CANVAS_TRANSLATE = 0.5;
-const CANVAS_TRANSLATE = 0.5;
+const CANVAS_TRANSLATE = 0;
 
 const CANVAS_LAYER: MappedConst<CanvasLayerName> = {
   DRAWING_HISTORY: 'DRAWING_HISTORY',

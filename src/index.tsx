@@ -80,9 +80,17 @@ const DrawLine: React.ForwardRefRenderFunction<IDrawLineHandle, Props> = (
     USER_INTERFACE: useRef<HTMLCanvasElement | null>(null),
   };
 
-  const [tmpCtxTranslated, setTmpCtxTranslated] = useState(false);
-  const [tmpOrganizedLineCtxTranslated, setOrganizedLineCtxTranslated] =
-    useState(false);
+  // const [tmpCtxTranslated, setTmpCtxTranslated] = useState(false);
+  let tmpCtxTranslated = false;
+  const setTmpCtxTranslated = (status: boolean) => {
+    tmpCtxTranslated = status;
+  };
+  // const [tmpOrganizedLineCtxTranslated, setOrganizedLineCtxTranslated] =
+  //   useState(false);
+  let tmpOrganizedLineCtxTranslated = false;
+  const setOrganizedLineCtxTranslated = (status: boolean) => {
+    tmpOrganizedLineCtxTranslated = status;
+  };
 
   // ポインターが移動した事を示すフラグ
   // const [pointerHasMoved, setPointerHasMoved] = useState(false);
